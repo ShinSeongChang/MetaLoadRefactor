@@ -1,0 +1,35 @@
+#pragma kernel ReadPixelAtCoordinates
+
+// Input texture Odd Frame
+Texture2D<float4> inputTextureOdd;
+// Input texture Even Frame
+Texture2D<float4> inputTextureEven;
+
+// Additional variables
+int frame;
+int coord_x;
+int coord_y;
+
+// Output buffer
+RWStructuredBuffer<float4> outputBuffer : register(u0);
+
+[numthreads(1, 1, 1)]
+void ReadPixelAtCoordinates(uint3 id : SV_DispatchThreadID)
+{
+    int3 coord = int3(coord_x, coord_y, 0);
+    
+    // Store the color in the output buffer
+    if (frame==1)
+    {
+        // Read the color at the specified coordinates
+        float4 colorOdd = inputTextureOdd.Load(coord);
+        outputBuffer[0] = colorOdd;
+    }
+    else
+    {
+        // Read the color at the specified coordinates
+        float4 colorEven = inputTextureEven.Load(coord);
+        outputBuffer[0] = colorEven;
+    }
+
+}
