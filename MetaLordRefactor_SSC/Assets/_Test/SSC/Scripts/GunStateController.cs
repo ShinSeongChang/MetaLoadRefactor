@@ -195,12 +195,12 @@ public class GunStateController : MonoBehaviour
         //originColor = GunUi.transform.GetChild(0).transform.
 
         mode[(int)GunMode.Paint] = transform.GetComponent<PaintGun>();
-        mode[(int)GunMode.Grab] = transform.GetComponent<GrabGun>();        
+        mode[(int)GunMode.Grab] = transform.GetComponent<GrabGun_Refactor>();        
 
-        for (int i = 0; i < mode.Length; i++)
-        {
-            mode[i].hideFlags = HideFlags.HideInInspector;            
-        }
+        //for (int i = 0; i < mode.Length; i++)
+        //{
+        //    mode[i].hideFlags = HideFlags.HideInInspector;            
+        //}
 
         currentMode = mode[(int)GunMode.Paint];
         SwapLayer();
@@ -572,29 +572,26 @@ public class GunStateController : MonoBehaviour
     }
 
     void ClearCatchList()
-    {
+    {        
         // 저장한 HashSet 만큼의 상위 오브젝트 탐색
         foreach (var obj in catchList)
-        {
+        {            
             // 탐색한 상위 오브젝트마다 가지고 있는 자식오브젝트 체크
             GameObject[] nullObj = new GameObject[obj.transform.childCount];            
-
 
             // 자식 오브젝트들 parent 해제
             for(int i = 0; i < nullObj.Length; i++)
             {
                 nullObj[i] = obj.gameObject.transform.GetChild(i).gameObject;
 
-                if (nullObj[i].GetComponent<MovedObject>() == null)
+                if (nullObj[i].GetComponent<MovedObject_Refactor>() == null)
                 {
                     Destroy(nullObj[i]);
                     continue;
                 }
 
-                nullObj[i].GetComponent<MovedObject>().CelarBond();
+                nullObj[i].GetComponent<MovedObject_Refactor>().CelarBond();
                 nullObj[i].gameObject.layer = LayerMask.NameToLayer("MovedObject");
-
-
             }
 
             for (int i = 0; i < nullObj.Length; i++)

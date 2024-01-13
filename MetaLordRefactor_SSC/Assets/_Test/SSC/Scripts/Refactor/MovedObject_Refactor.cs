@@ -10,6 +10,7 @@ public class MovedObject_Refactor : MonoBehaviour
     Rigidbody myRigid = null;
     NpcBase targetNpc = null;
     GameObject contactObj = null;
+    CatchObject combineObj = null;
 
     #endregion
 
@@ -29,10 +30,10 @@ public class MovedObject_Refactor : MonoBehaviour
     string unContactTag = "Untagged";
     string catchObjectName = "CatchObject";
 
-    string catchLayer = "GrabedObject";
-    string defualtLayer = "Default";
-    string movedLayer = "MovedObject";
-    string npcLayer = "NPC";
+    const string catchLayer = "GrabedObject";
+    const string defaultLayer = "Default";
+    const string movedLayer = "MovedObject";
+    const string npcLayer = "NPC";
         
 
     Coroutine sleepCoroutine;
@@ -46,54 +47,24 @@ public class MovedObject_Refactor : MonoBehaviour
 
     #endregion
 
-
     static int test = 0;
-
     private void Awake()
     {
         StartCaching();
     }
 
     void Update()
-    {
+    {        
         FallingObject();
     }
 
-    private void FallingObject()
-    {
-        // 내 리지드바디가 존재하고, 그랩한 대상이 아닐 때 (그랩한 대상은 낙하속도 X)
-        if (myRigid && !checkContact)
-        {
-            if (myRigid.velocity.magnitude <= 0.5f && !isSleep)//(contactTime >= 3)
-            {
-                SleepObj();
-                return;
-            }
-
-            // 충돌시간이 일정값 이하면 (공중에 있는 상태면)
-            if (contactTime < 3f && !isSleep)
-            {
-                // 임의의 중력가속도 적용
-                Vector3 tempVelocity = myRigid.velocity;
-                ySpeed -= Time.deltaTime * decrementGravity;
-                tempVelocity.y += ySpeed;
-
-                if (tempVelocity.y >= maxGravity)
-                {
-                    tempVelocity.y = maxGravity;
-                }
-
-                myRigid.velocity = tempVelocity;
-            }
-        }
-    }
-
     private void OnTriggerEnter(Collider collision)
-    {
+    {            
+        // layer 체크용으로 Trigger되는 오브젝트 캐싱
         contactObj = collision.gameObject;
 
         // 트리거를 체크하면 안되는 상황
-        if (CanContact)
+        if (!CanContact)
         {
             return;
         }
@@ -101,177 +72,58 @@ public class MovedObject_Refactor : MonoBehaviour
         // 충돌한 오브젝트 캐싱
         GameObject collisionObj = collision.gameObject;
 
-        // 상위 오브젝트의 클래스를 검사한다?
-
-        // 충돌한 오브젝트의 부모가 없을경우
-        if (collisionObj.transform.parent == null)
+        // 부딪힌 오브젝트의 Combine 상태를 체크한다.
+        // 사실상 여기는 Pass 구간? => 떨어지고 있는 GrabedObject에 갖다 댄다면
+        if (collisionObj.GetComponent<CatchObject>())
         {
-            CreateCatchObject(collision, collisionObj, catchLayer);
+            Debug.Log(1);
+            combineObj = collisionObj.GetComponent<CatchObject>();
+            SetHash(myColid);
+
+            ClearState();
+            GrabGun_Refactor.instance.CancelObj();
         }
-        // 부모가 존재할 경우
         else
-        {
-            GameObject contactObj = collision.gameObject;
-
-            // TODO : 레이어 체크가 아닌 CatchObject 스크립트로 여부 확인
-            // 부모가 상위 오브젝트 경우
-            if (contactObj.transform.parent.gameObject.layer == LayerMask.NameToLayer("GrabedObject"))
-            {
-                // HashSet 갱신    
-                transform.parent = contactObj.transform.parent;
-                contactObj.transform.parent.GetComponent<CatchObject>().AddChild(transform.GetComponent<MeshCollider>());
-
-                ClearState();
-                GrabGun.instance.CancelObj();
-
-            }
-            // 부모가 고정형 오브젝트 경우
-            else if (contactObj.transform.parent.gameObject.layer == LayerMask.NameToLayer("Default"))
-            {
-                // 부딪힌 오브젝트도 고정형이면
-                if (contactObj.transform.gameObject.layer == LayerMask.NameToLayer("Default"))
+        {      
+            // 부모 오브젝트의 Combine 상태를 체크한다.
+            if (collisionObj.GetComponentInParent<CatchObject>())
+            {                            
+                combineObj = collisionObj.GetComponentInParent<CatchObject>();
+                SetHash(myColid);
+            }            
+            // Combine 안된 상태라면 => 고정형 오브젝트, NPC, 그랩이후 해제된 MovedObject들
+            else
+            {                
+                //충돌한 오브젝트의 레이어를 검출한다.
+                switch(collisionObj.layer.ToString().Trim())
                 {
-                    // 클래스 여부로 기존 고정형 오브젝트인지 합쳐진 오브젝트인지
-                    if (contactObj.transform.parent.GetComponent<CatchObject>())
-                    {
-                        transform.SetParent(contactObj.transform.parent);
-
-                        ClearState();
-                        GrabGun.instance.CancelObj();
-                    }
-                    else
-                    {
-                        // 상위 오브젝트 생성
-                        collisionObj = new GameObject("test" + test++);
-                        collisionObj.transform.gameObject.layer = LayerMask.NameToLayer("Default");
-                        CatchObject controll = collisionObj.AddComponent<CatchObject>();
-                        GunStateController.AddList(controll);
-                        collisionObj.transform.position = collision.ClosestPoint(transform.position);
-
-                        // 그랩한 오브젝트 상위 고정형 오브젝트 종속, HashSet 갱신    
-                        transform.parent = collisionObj.transform;
-                        controll.AddChild(transform.GetComponent<MeshCollider>());
-
-                        ClearState();
-                        GrabGun.instance.CancelObj();
-
-                    }
-                }
-                else if (contactObj.transform.gameObject.layer == LayerMask.NameToLayer("NPC"))
-                {
-                    collisionObj = new GameObject("test" + test++);
-                    collisionObj.transform.gameObject.layer = LayerMask.NameToLayer("NPC");
-                    //transform.gameObject.layer = LayerMask.NameToLayer("NPC");
-                    CatchObject controll = collisionObj.AddComponent<CatchObject>();
-                    GunStateController.AddList(controll);
-                    collisionObj.transform.position = collision.ClosestPoint(transform.position);
-
-                    // 그랩한 오브젝트 상위 오브젝트 종속, HashSet 갱신    
-                    transform.parent = collisionObj.transform;
-                    controll.AddChild(transform.GetComponent<MeshCollider>());
-                    targetNpc = collision.transform.GetComponent<NpcBase>();
-                    GunStateController.AddList(targetNpc);
-                    targetNpc.ChangedState(npcState.objectAttached);
-
-                    ClearState();
-                    GrabGun.instance.CancelObj();
-                }
-                else
-                {
-                    // 충돌한 이동형 오브젝트가 고정형에 집합된 형태라면 
-                    if (contactObj.transform.parent.GetComponent<CatchObject>() != null &&
-                        contactObj.transform.parent.gameObject.layer == LayerMask.NameToLayer("Default"))
-                    {
-                        //Debug.Log("===");
-                        transform.parent = contactObj.transform.parent;
-                        checkContact = false;
-                        ClearState();
-                        GrabGun.instance.CancelObj();
-
-                        ClearState();
-                        GrabGun.instance.CancelObj();
-                        return;
-                    }
-                    // 상위 오브젝트 생성
-                    collisionObj = new GameObject("test" + test++);
-                    collisionObj.transform.gameObject.layer = LayerMask.NameToLayer("GrabedObject");
-                    CatchObject controll = collisionObj.AddComponent<CatchObject>();
-                    GunStateController.AddList(controll);
-                    collisionObj.transform.position = collision.ClosestPoint(transform.position);
-
-                    // 그랩한 오브젝트와 충돌한 오브젝트 모두 상위 오브젝트 종속, HashSet 갱신    
-                    transform.parent = collisionObj.transform;
-                    collision.transform.parent = collisionObj.transform;
-                    controll.AddChild(transform.GetComponent<MeshCollider>());
-                    controll.AddChild(collision.transform.GetComponent<MeshCollider>());
-
-                    ClearState();
-                    GrabGun.instance.CancelObj();
-
-                }
-            }
-            // 아기곰의 경우
-            else if (contactObj.transform.gameObject.layer == LayerMask.NameToLayer("NPC"))
-            {
-                collisionObj = new GameObject();
-                collisionObj.transform.gameObject.layer = LayerMask.NameToLayer("NPC");
-                //transform.gameObject.layer = LayerMask.NameToLayer("NPC");
-                CatchObject controll = collisionObj.AddComponent<CatchObject>();
-                GunStateController.AddList(controll);
-                collisionObj.transform.position = collision.ClosestPoint(transform.position);
-
-                // 그랩한 오브젝트 상위 오브젝트 종속, HashSet 갱신    
-                transform.parent = collisionObj.transform;
-                controll.AddChild(transform.GetComponent<MeshCollider>());
-                targetNpc = collision.transform.GetComponent<NpcBase>();
-                targetNpc.ChangedState(npcState.objectAttached);
-
-                ClearState();
-                GrabGun.instance.CancelObj();
-            }
-            // 엔피씨에 붙은 조합형 일 경우
-            else if (contactObj.transform.gameObject.layer == LayerMask.NameToLayer("MovedObject") &&
-                contactObj.transform.parent?.GetComponent<CatchObject>() != null)
-            {
-                CatchObject controll = contactObj.transform.parent.GetComponent<CatchObject>();
-
-                // 그랩한 오브젝트 상위 오브젝트 종속, HashSet 갱신    
-                transform.parent = contactObj.transform.parent;
-                controll.AddChild(transform.GetComponent<MeshCollider>());
-
-                ClearState();
-                GrabGun.instance.CancelObj();
+                    // 해당하는 레이어 맞는 상위 오브젝트 생성하기
+                    case defaultLayer:
+                        CreateCatchObject(collision, defaultLayer);
+                        SetHash(myColid);                        
+                        break;
+                    case npcLayer:
+                        CreateCatchObject(collision, npcLayer);
+                        SetHash(myColid);                        
+                        break;
+                    case movedLayer:
+                        CreateCatchObject(collision, catchLayer);
+                        SetHash(myColid, collisionObj.GetComponent<MeshCollider>());                        
+                        break;
+                }                
             }
 
+            ClearState();
+            GrabGun_Refactor.instance.CancelObj();
         }
-
-        //ClearState();
-        //GrabGun.instance.CancelObj();
-
-    }
-
-    private void CreateCatchObject(Collider collision, GameObject collisionObj, string parentLayer)
-    {
-        // 상위 오브젝트 생성 및 Component Setting
-        GameObject parentObj = new GameObject(catchObjectName);
-        parentObj.layer = LayerMask.NameToLayer(parentLayer);
-        CatchObject controll = parentObj.AddComponent<CatchObject>();
-        GunStateController.AddList(controll);
-        parentObj.transform.position = collision.ClosestPoint(transform.position);
-
-        // 그랩한 오브젝트와 충돌한 오브젝트 모두 상위 오브젝트 종속, HashSet 갱신                    
-        transform.parent = parentObj.transform;
-        collision.transform.parent = parentObj.transform;        
-        controll.AddChild(transform.GetComponent<MeshCollider>());
-        controll.AddChild(collision.transform.GetComponent<MeshCollider>());
-
-        ClearState();
-        GrabGun.instance.CancelObj();
+        
     }
 
     //// 그랩한 물건이 이동형 오브젝트와 부딪힐때마다 물리력 행사 콜백
     private void OnCollisionEnter(Collision collision)
-    {
+    {            
+        contactObj = collision.gameObject;
+
         if (collision.gameObject.CompareTag(contactTag))
         {
             ySpeed = 0;
@@ -336,11 +188,11 @@ public class MovedObject_Refactor : MonoBehaviour
                             force = -(collision.contacts[0].normal) * 2f;
                         }
 
-                        collision.gameObject.GetComponent<MovedObject>().InitOverap(force);
+                        collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
                     }
                     else
                     {
-                        collision.gameObject.GetComponent<MovedObject>().InitOverap();
+                        collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap();
                     }
 
                 }
@@ -351,11 +203,13 @@ public class MovedObject_Refactor : MonoBehaviour
 
     // 충돌지점 본드 체크
     private void OnCollisionStay(Collision collision)
-    {
+    {                    
+        contactObj = collision.gameObject;
+
         // 그랩한 오브젝트가 플레이어 닿을시 임시 캔슬처리
         if (checkContact && collision.gameObject.layer == LayerMask.NameToLayer("Player"))
         {
-            GrabGun.instance.CancelObj();
+            GrabGun_Refactor.instance.CancelObj();
         }
 
         //그랩한 MovedObject가 아니면 충돌 포인트 체크
@@ -398,10 +252,9 @@ public class MovedObject_Refactor : MonoBehaviour
                 myRigid.velocity = temp;
             }
         }
-
-        // 이미 본드 동작을 하는 오브젝트를 다시 그랩하면 그랩하는순간 충돌면을 체크하여 그랩 해제됨에 따라 상태를 제어할 bool값 추가
-        if (checkContact == false || collision.gameObject.layer == LayerMask.NameToLayer("CatchObject"))
-        {
+        
+        if (!CanContact)
+        {            
             return;
         }
 
@@ -419,141 +272,46 @@ public class MovedObject_Refactor : MonoBehaviour
 
             if (PaintTarget.RayChannel(ray, 1.5f, layerMask) == 0 && collision.gameObject.GetComponent<Controller_Physics>() == null && checkContact)
             {
-                GameObject parentObj = null;
+                GameObject collisionObj = collision.gameObject;
+                Collider collider = collisionObj.GetComponent<Collider>();
 
-                // 충돌한 오브젝트의 부모가 없을경우
-                if (collision.transform.parent == null)
-                {
-                    // 상위 오브젝트 생성
-                    parentObj = new GameObject("test" + test++);
-                    parentObj.transform.gameObject.layer = LayerMask.NameToLayer("GrabedObject");
-                    CatchObject controll = parentObj.AddComponent<CatchObject>();
-                    GunStateController.AddList(controll);
-                    parentObj.transform.position = collision.contacts[i].point;
-
-                    // 그랩한 오브젝트와 충돌한 오브젝트 모두 상위 오브젝트 종속, HashSet 갱신                    
-                    transform.parent = parentObj.transform;
-                    collision.transform.parent = parentObj.transform;                    
-                    controll.AddChild(transform.GetComponent<MeshCollider>());
-                    controll.AddChild(collision.transform.GetComponent<MeshCollider>());
+                if (collisionObj.GetComponent<CatchObject>())
+                {                    
+                    combineObj = collisionObj.GetComponent<CatchObject>();
+                    SetHash(myColid);
                 }
-                // 부모가 존재할 경우
                 else
-                {
-                    GameObject contactObj = collision.gameObject;
-
-                    // TODO : 레이어 체크가 아닌 CatchObject 스크립트로 여부 확인
-                    // 부모가 상위 오브젝트 경우
-                    if (contactObj.transform.parent.gameObject.layer == LayerMask.NameToLayer("GrabedObject"))
-                    {
-                        // HashSet 갱신    
-                        transform.parent = contactObj.transform.parent;
-                        contactObj.transform.parent.GetComponent<CatchObject>().AddChild(transform.GetComponent<MeshCollider>());
-
+                {                   
+                    // 부모 오브젝트의 Combine 상태를 체크한다.
+                    if (collisionObj.GetComponentInParent<CatchObject>())
+                    {                       
+                        combineObj = collisionObj.GetComponentInParent<CatchObject>();
+                        SetHash(myColid);
                     }
-                    // 부모가 고정형 오브젝트 경우
-                    else if (contactObj.transform.parent.gameObject.layer == LayerMask.NameToLayer("Default"))
-                    {
-                        // 부딪힌 오브젝트도 고정형이면
-                        if (contactObj.transform.gameObject.layer == LayerMask.NameToLayer("Default"))
+                    // Combine 안된 상태라면 => 고정형 오브젝트, NPC, 그랩이후 해제된 MovedObject들
+                    else
+                    {                                                                        
+                        if(collisionObj.layer == LayerMask.NameToLayer(defaultLayer))
                         {
-                            // 클래스 여부로 기존 고정형 오브젝트인지 합쳐진 오브젝트인지
-                            if (contactObj.transform.parent.GetComponent<CatchObject>())
-                            {
-                                transform.SetParent(contactObj.transform.parent);
-                            }
-                            else
-                            {
-                                // 상위 오브젝트 생성
-                                parentObj = new GameObject("test" + test++);
-                                parentObj.transform.gameObject.layer = LayerMask.NameToLayer("Default");
-                                CatchObject controll = parentObj.AddComponent<CatchObject>();
-                                GunStateController.AddList(controll);
-                                parentObj.transform.position = collision.contacts[i].point;
-
-                                // 그랩한 오브젝트 상위 고정형 오브젝트 종속, HashSet 갱신    
-                                transform.parent = parentObj.transform;
-                                controll.AddChild(transform.GetComponent<MeshCollider>());
-
-                            }
+                            CreateCatchObject(collider, defaultLayer);
+                            SetHash(myColid);                            
                         }
-                        else if (contactObj.transform.gameObject.layer == LayerMask.NameToLayer("NPC"))
+                        else if(collisionObj.layer == LayerMask.NameToLayer(npcLayer))
                         {
-                            parentObj = new GameObject("test" + test++);
-                            parentObj.transform.gameObject.layer = LayerMask.NameToLayer("NPC");
-                            //transform.gameObject.layer = LayerMask.NameToLayer("NPC");
-                            CatchObject controll = parentObj.AddComponent<CatchObject>();
-                            GunStateController.AddList(controll);
-                            parentObj.transform.position = collision.contacts[i].point;
-
-                            // 그랩한 오브젝트 상위 오브젝트 종속, HashSet 갱신    
-                            transform.parent = parentObj.transform;
-                            controll.AddChild(transform.GetComponent<MeshCollider>());
-                            targetNpc = collision.transform.GetComponent<NpcBase>();
-                            targetNpc.ChangedState(npcState.objectAttached);
-                            GunStateController.AddList(targetNpc);
+                            CreateCatchObject(collider, npcLayer);
+                            SetHash(myColid);                            
                         }
-                        else
+                        else if(collisionObj.layer == LayerMask.NameToLayer(movedLayer))
                         {
-                            // 충돌한 이동형 오브젝트가 고정형에 집합된 형태라면 
-                            if (contactObj.transform.parent.GetComponent<CatchObject>() != null &&
-                                contactObj.transform.parent.gameObject.layer == LayerMask.NameToLayer("Default"))
-                            {
-                                //Debug.Log("===");
-                                transform.parent = contactObj.transform.parent;
-                                checkContact = false;
-                                ClearState();
-                                GrabGun.instance.CancelObj();
-                                return;
-                            }
-                            // 상위 오브젝트 생성
-                            parentObj = new GameObject("test" + test++);
-                            parentObj.transform.gameObject.layer = LayerMask.NameToLayer("GrabedObject");
-                            CatchObject controll = parentObj.AddComponent<CatchObject>();
-                            GunStateController.AddList(controll);
-                            parentObj.transform.position = collision.contacts[i].point;
-
-                            // 그랩한 오브젝트와 충돌한 오브젝트 모두 상위 오브젝트 종속, HashSet 갱신    
-                            transform.parent = parentObj.transform;
-                            collision.transform.parent = parentObj.transform;
-                            controll.AddChild(transform.GetComponent<MeshCollider>());
-                            controll.AddChild(collision.transform.GetComponent<MeshCollider>());
-
+                            CreateCatchObject(collider, catchLayer);
+                            SetHash(myColid, collisionObj.GetComponent<MeshCollider>());                            
                         }
-                    }
-                    // 아기곰의 경우
-                    else if (contactObj.transform.gameObject.layer == LayerMask.NameToLayer("NPC"))
-                    {
-                        parentObj = new GameObject("test" + test++);
-                        parentObj.transform.gameObject.layer = LayerMask.NameToLayer("NPC");
-                        //transform.gameObject.layer = LayerMask.NameToLayer("NPC");
-                        CatchObject controll = parentObj.AddComponent<CatchObject>();
-                        GunStateController.AddList(controll);
-                        parentObj.transform.position = collision.contacts[i].point;
-
-                        // 그랩한 오브젝트 상위 오브젝트 종속, HashSet 갱신    
-                        transform.parent = parentObj.transform;
-                        controll.AddChild(transform.GetComponent<MeshCollider>());
-                        targetNpc = collision.transform.GetComponent<NpcBase>();
-                        targetNpc.ChangedState(npcState.objectAttached);
-                        GunStateController.AddList(targetNpc);
-                    }
-                    // 엔피씨에 붙은 조합형 일 경우
-                    else if (contactObj.transform.gameObject.layer == LayerMask.NameToLayer("MovedObject") &&
-                        contactObj.transform.parent?.GetComponent<CatchObject>() != null)
-                    {
-                        CatchObject controll = contactObj.transform.parent.GetComponent<CatchObject>();
-
-                        // 그랩한 오브젝트 상위 오브젝트 종속, HashSet 갱신    
-                        transform.parent = contactObj.transform.parent;
-                        controll.AddChild(transform.GetComponent<MeshCollider>());
                     }
 
                 }
 
                 ClearState();
-                GrabGun.instance.CancelObj();
-
+                GrabGun_Refactor.instance.CancelObj();
             }
         }
     }
@@ -686,6 +444,75 @@ public class MovedObject_Refactor : MonoBehaviour
         contactTime = 0;
     }
 
+    /// <summary>
+    /// Rigidbody가 존재하는 MovedObject 강제 중력값 넣는 메소드
+    /// </summary>
+    private void FallingObject()
+    {
+        // 내 리지드바디가 존재하고, 그랩한 대상이 아닐 때 (그랩한 대상은 낙하속도 X)
+        if (myRigid && !checkContact)
+        {
+            if (myRigid.velocity.magnitude <= 0.5f && !isSleep)//(contactTime >= 3)
+            {
+                SleepObj();
+                return;
+            }
+
+            // 충돌시간이 일정값 이하면 (공중에 있는 상태면)
+            if (contactTime < 3f && !isSleep)
+            {
+                // 임의의 중력가속도 적용
+                Vector3 tempVelocity = myRigid.velocity;
+                ySpeed -= Time.deltaTime * decrementGravity;
+                tempVelocity.y += ySpeed;
+
+                if (tempVelocity.y >= maxGravity)
+                {
+                    tempVelocity.y = maxGravity;
+                }
+
+                myRigid.velocity = tempVelocity;
+            }
+        }
+    }
+
+    /// <summary>
+    /// MovedObject의 충돌 이벤트 발생시 새로 만들어낼 상위 객체 정의하는 메소드
+    /// </summary>
+    /// <param name="collision">충돌한 오브젝트 Collider</param>    
+    /// <param name="parentLayer">상위 오브젝트 설정 레이어</param>
+    private void CreateCatchObject(Collider collision, string parentLayer)
+    {
+        // 상위 오브젝트 생성 및 Component Setting
+        GameObject parentObj = new GameObject(catchObjectName);         // 상위 오브젝트 생성
+        parentObj.layer = LayerMask.NameToLayer(parentLayer);           // 상위 오브젝트 Layer 설정
+        combineObj = parentObj.AddComponent<CatchObject>();             // 상위 오브젝트 스크립트 추가
+        GunStateController.AddList(combineObj);                           // Controller에서 재장전시 목록 순회를 위해 HashSet 갱신
+        parentObj.transform.position = collision.ClosestPoint(transform.position);  // 상위 오브젝트 위치 정렬  
+    }
+
+    // TODO : 추후에 CatchObject를 MovedObject 상속받게하여 메소드를 공유한다면
+    /// <summary>
+    /// 생성된 상위 오브젝트에서 관리할 자식 Collider 갱신해주기 위한 메소드
+    /// <para>
+    /// 전달받은 Collider 객체들을 상위 오브젝트에 종속 시킨다.
+    /// </para>
+    /// </summary>    
+    /// <param name="colliders">부모 오브젝트에 종속되는 오브젝트들의 MeshCollider</param>
+    void SetHash(params MeshCollider[] colliders)
+    {
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            // HashSet 갱신
+            combineObj.AddChild(colliders[i]);
+
+            // 상위 오브젝트에 전달받은오브젝트들 종속
+            colliders[i].transform.SetParent(combineObj.transform);
+        }
+
+        combineObj = null;
+    }
+
     #region BindingMethod
 
     /// <summary>
@@ -700,13 +527,13 @@ public class MovedObject_Refactor : MonoBehaviour
         myColid = GetComponent<MeshCollider>();
 
         // 레이어 마스크 설정
-        layerMask = LayerMask.GetMask("Default") | LayerMask.GetMask("NPC") | LayerMask.GetMask("StaticObject") | LayerMask.GetMask("MovedObject") | LayerMask.GetMask("GrabedObject");
+        layerMask = LayerMask.GetMask(defaultLayer, npcLayer, "StaticObject", movedLayer, catchLayer);
     }    
 
     bool CheckLayer(GameObject contactObj)
-    {
-        if (contactObj.layer == LayerMask.GetMask("CatchObject") ||
-            contactObj.layer == LayerMask.GetMask("Wall"))
+    {        
+
+        if (contactObj.layer == LayerMask.GetMask("CatchObject", "Wall"))
         {
             return false;
         }

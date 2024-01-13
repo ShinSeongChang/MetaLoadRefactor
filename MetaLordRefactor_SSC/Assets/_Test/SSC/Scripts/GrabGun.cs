@@ -162,9 +162,9 @@ public class GrabGun : GunBase
         {
             targetObj.GetComponent<MeshCollider>().material.dynamicFriction = 1f;
 
-            if (targetObj.GetComponent<MovedObject>() != null)
+            if (targetObj.GetComponent<MovedObject_Refactor>() != null)
             {
-                targetObj.GetComponent<MovedObject>().CancelGrab();
+                targetObj.GetComponent<MovedObject_Refactor>().CancelGrab();
             }
 
         }
@@ -215,7 +215,7 @@ public class GrabGun : GunBase
             {                
                 targetObj.GetComponent<MeshCollider>().convex = true;
                 targetObj.AddComponent<Rigidbody>();
-                targetObj.GetComponent<MovedObject>().ChangedState();
+                targetObj.GetComponent<MovedObject_Refactor>().ChangedState();
             }
             else
             {
@@ -228,7 +228,7 @@ public class GrabGun : GunBase
                 else
                 {
                     targetObj.GetComponent<MeshCollider>().convex = true;
-                    targetObj.GetComponent<MovedObject>().ChangedState();
+                    targetObj.GetComponent<MovedObject_Refactor>().ChangedState();
 
                 }
 
@@ -251,7 +251,7 @@ public class GrabGun : GunBase
                 targetObj.transform.parent = null;
                 targetObj.GetComponent<MeshCollider>().convex = true;
                 targetObj.AddComponent<Rigidbody>();
-                targetObj.GetComponent<MovedObject>().ChangedState();
+                targetObj.GetComponent<MovedObject_Refactor>().ChangedState();
 
             }
             // 상위 오브젝트 경우
