@@ -169,9 +169,9 @@ public class GrabGun : GunBase
 
         }
 
-        if (targetObj?.GetComponent<CatchObject>() != null)
+        if (targetObj?.GetComponent<CatchObject_Refactor>() != null)
         {
-            targetObj.GetComponent<CatchObject>().CancelGrab();
+            targetObj.GetComponent<CatchObject_Refactor>().CancelGrab();
         }
 
         //Debug.LogWarning(Physics.reuseCollisionCallbacks);
@@ -220,16 +220,15 @@ public class GrabGun : GunBase
             else
             {
                 // 조합된 오브젝트라면
-                if(targetObj.GetComponent<CatchObject>() != null)
+                if(targetObj.GetComponent<CatchObject_Refactor>() != null)
                 {
-                    targetObj.GetComponent<CatchObject>().SetUpMesh();
-                    targetObj.GetComponent<CatchObject>().ChangedState();
+                    targetObj.GetComponent<CatchObject_Refactor>().SetUpMesh();
+                    targetObj.GetComponent<CatchObject_Refactor>().ChangedState();
                 }
                 else
                 {
                     targetObj.GetComponent<MeshCollider>().convex = true;
                     targetObj.GetComponent<MovedObject_Refactor>().ChangedState();
-
                 }
 
             }
@@ -259,7 +258,7 @@ public class GrabGun : GunBase
             {                
                 // 그랩 대상을 상위 오브젝트로 변경
                 targetObj = targetObj.transform.parent.gameObject;
-                CatchObject controll = targetObj.GetComponent<CatchObject>();
+                CatchObject_Refactor controll = targetObj.GetComponent<CatchObject_Refactor>();
                 controll.SetUpMesh();
                 targetObj.AddComponent<Rigidbody>();
                 targetRigid = targetObj.GetComponent<Rigidbody>();

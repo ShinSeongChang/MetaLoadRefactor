@@ -4,38 +4,37 @@ using UnityEngine;
 public class MovedObject_Refactor : MonoBehaviour
 {
     #region PrivateComponent
-
-    LayerMask layerMask;
     MeshCollider myColid;
-    Rigidbody myRigid = null;
-    NpcBase targetNpc = null;
-    GameObject contactObj = null;
-    CatchObject combineObj = null;
 
+    protected CatchObject_Refactor combineObj = null;
+    protected GameObject contactObj = null;
+    protected LayerMask layerMask;
+    protected Rigidbody myRigid = null;
+    protected NpcBase targetNpc = null;
+    
     #endregion
 
     #region PrivateValue
 
-    int checkCount = 0;
-    float ySpeed = default;
-    float contactTime = 0f;
-    float decrementGravity = 0.5f;
-    float decrement = 0.5f;
-    float maxGravity = 30f;
+    protected int checkCount = 0;
+    protected float ySpeed = default;
+    protected float contactTime = 0f;
+    protected float decrementGravity = 0.5f;
+    protected float decrement = 0.5f;
+    protected float maxGravity = 30f;
 
-    bool isSleep = false;
-    bool checkContact = false;    
+    protected bool isSleep = false;
+    protected bool checkContact = false;    
 
-    string contactTag = "ContactObject";
-    string unContactTag = "Untagged";
-    string catchObjectName = "CatchObject";
-
-    const string catchLayer = "GrabedObject";
-    const string defaultLayer = "Default";
-    const string movedLayer = "MovedObject";
-    const string npcLayer = "NPC";
+    protected string contactTag = "ContactObject";
+    protected string unContactTag = "Untagged";
+    protected string catchObjectName = "CatchObject";
+    
+    protected const string catchLayer = "GrabedObject";
+    protected const string defaultLayer = "Default";
+    protected const string movedLayer = "MovedObject";
+    protected const string npcLayer = "NPC";
         
-
     Coroutine sleepCoroutine;
 
     #endregion
@@ -43,14 +42,14 @@ public class MovedObject_Refactor : MonoBehaviour
     #region Property
 
     // 충돌을 감지하면 안되는 상황 묶기    
-    bool CanContact  => checkContact | CheckLayer(contactObj) | transform.parent == null;
+    protected bool CanContact  => CheckLayer(contactObj) && transform.parent == null && checkContact;
+    protected bool CanOverap => CheckPaint(contactObj) && transform.childCount != 0 && isSleep && CheckTag(contactObj);
 
     #endregion
 
-    static int test = 0;
-    private void Awake()
+    void Awake()
     {
-        StartCaching();
+        StartCaching();      
     }
 
     void Update()
@@ -58,14 +57,14 @@ public class MovedObject_Refactor : MonoBehaviour
         FallingObject();
     }
 
-    private void OnTriggerEnter(Collider collision)
+    protected virtual void OnTriggerEnter(Collider collision)
     {            
         // layer 체크용으로 Trigger되는 오브젝트 캐싱
         contactObj = collision.gameObject;
 
         // 트리거를 체크하면 안되는 상황
         if (!CanContact)
-        {
+        {            
             return;
         }
 
@@ -74,45 +73,50 @@ public class MovedObject_Refactor : MonoBehaviour
 
         // 부딪힌 오브젝트의 Combine 상태를 체크한다.
         // 사실상 여기는 Pass 구간? => 떨어지고 있는 GrabedObject에 갖다 댄다면
-        if (collisionObj.GetComponent<CatchObject>())
-        {
-            Debug.Log(1);
-            combineObj = collisionObj.GetComponent<CatchObject>();
+        if (collisionObj.GetComponent<CatchObject_Refactor>())
+        {            
+            combineObj = collisionObj.GetComponent<CatchObject_Refactor>();
             SetHash(myColid);
-
-            ClearState();
-            GrabGun_Refactor.instance.CancelObj();
         }
+        // 충돌한 오브젝트에 CatchObject가 없다면 부모 오브젝트의 Combine 상태를 체크한다.
         else
         {      
-            // 부모 오브젝트의 Combine 상태를 체크한다.
-            if (collisionObj.GetComponentInParent<CatchObject>())
-            {                            
-                combineObj = collisionObj.GetComponentInParent<CatchObject>();
+            // Combine 된 상태라면
+            if (collisionObj.GetComponentInParent<CatchObject_Refactor>())
+            {                         
+                // 해당 부모 오브젝트에 나 자신 종속,
+                combineObj = collisionObj.GetComponentInParent<CatchObject_Refactor>();
                 SetHash(myColid);
             }            
             // Combine 안된 상태라면 => 고정형 오브젝트, NPC, 그랩이후 해제된 MovedObject들
             else
-            {                
-                //충돌한 오브젝트의 레이어를 검출한다.
-                switch(collisionObj.layer.ToString().Trim())
+            {
+                Debug.Log(3);
+                Debug.Log(gameObject.name);
+                Debug.Log(contactObj.name);
+                // 고정형과 부딪혔을 때
+                if (collisionObj.layer == LayerMask.NameToLayer(defaultLayer))
                 {
-                    // 해당하는 레이어 맞는 상위 오브젝트 생성하기
-                    case defaultLayer:
-                        CreateCatchObject(collision, defaultLayer);
-                        SetHash(myColid);                        
-                        break;
-                    case npcLayer:
-                        CreateCatchObject(collision, npcLayer);
-                        SetHash(myColid);                        
-                        break;
-                    case movedLayer:
-                        CreateCatchObject(collision, catchLayer);
-                        SetHash(myColid, collisionObj.GetComponent<MeshCollider>());                        
-                        break;
-                }                
+                    CreateCatchObject(GetComponent<Collider>(), defaultLayer);
+                    SetHash(myColid);
+                }
+                // NPC와 부딪혔을 때
+                else if (collisionObj.layer == LayerMask.NameToLayer(npcLayer))
+                {
+                    CreateCatchObject(GetComponent<Collider>(), npcLayer);
+                    SetHash(myColid);
+                    targetNpc = collisionObj.GetComponent<NpcBase>();
+                    targetNpc.ChangedState(npcState.objectAttached);
+                }
+                // 이동형과 부딪혔을 때
+                else if (collisionObj.layer == LayerMask.NameToLayer(movedLayer))
+                {
+                    Debug.Log(4);
+                    CreateCatchObject(GetComponent<Collider>(), catchLayer);
+                    SetHash(myColid, collisionObj.GetComponent<MeshCollider>());
+                }
             }
-
+            
             ClearState();
             GrabGun_Refactor.instance.CancelObj();
         }
@@ -120,7 +124,7 @@ public class MovedObject_Refactor : MonoBehaviour
     }
 
     //// 그랩한 물건이 이동형 오브젝트와 부딪힐때마다 물리력 행사 콜백
-    private void OnCollisionEnter(Collision collision)
+    protected virtual void OnCollisionEnter(Collision collision)
     {            
         contactObj = collision.gameObject;
 
@@ -136,9 +140,14 @@ public class MovedObject_Refactor : MonoBehaviour
             }
 
         }
+
+        if(!CanContact)
+        {
+            return;
+        }
+
         if (checkContact)
         {
-
             gameObject.tag = contactTag;
         }
 
@@ -146,55 +155,36 @@ public class MovedObject_Refactor : MonoBehaviour
         if (collision.gameObject.layer == LayerMask.NameToLayer("MovedObject"))
         {
             // PaintTaget에 bool값 체크 존재, 페인팅된 대상에는 물리력을 부여 x Or 내가 페인팅된 상태면 X Or 특정 불값을 통해 연쇄적으로 서로에게 물리부여 상황 벗어나기
-            if (collision.gameObject.GetComponent<PaintTarget>().CheckPainted() ||
-                transform.childCount != 0 ||
-                isSleep ||
-                collision.gameObject.CompareTag(contactTag))
+            if (!CanOverap)
             {
                 return;
             }
 
-            // 대상이 조합형 오브젝트라면 And 내가 그랩한 오브젝트만 주변 오브젝트에 물리력을 부여한다.     
-            if (collision.gameObject.transform.parent?.GetComponent<CatchObject>() != null && checkContact)
+            // Combine된 오브젝트면 Combine에 물리력 부여           
+            if (collision.transform.GetComponentInParent<CatchObject_Refactor>())
             {
-                // GrabedObejct 레이어인 조합오브젝트에만 영향을 줘야함
-                // 고정형, NPC에 붙은 조합오브젝트가 아니라면 물리력 부여
-                if (collision.transform.parent?.gameObject.layer == LayerMask.NameToLayer("Default") ||
-                    collision.transform.parent?.gameObject.layer == LayerMask.NameToLayer("NPC"))
+                if (checkContact)
                 {
-                    return;
+                    Vector3 force = -(collision.contacts[0].normal * 2f);
+                    collision.gameObject.GetComponent<CatchObject_Refactor>().InitOverap(force);
                 }
-
-                // 조합된 오브젝트에 물리력 부여
-                collision.gameObject?.transform.parent.GetComponent<CatchObject>().InitOverap();
-            }
-            // 대상이 단일 이동형 오브젝트라면 And 내가 그랩한 오브젝트만 주변 오브젝트에 물리력을 부여한다.            
-            else if (collision.gameObject.layer == LayerMask.NameToLayer("MovedObject") && myRigid)
-            {
-                // 조합 오브젝트가 아닌 이동형 오브젝트에만 물리력 부여
-                if (collision.gameObject.transform.parent?.GetComponent<CatchObject>() == null)
+                else
                 {
-                    if (checkContact)
-                    {
-                        Vector3 force;
-
-                        if (collision.contacts[0].normal.y >= 0.5f)
-                        {
-                            myRigid.velocity = Vector3.zero;
-                            force = Vector3.zero;
-                        }
-                        else
-                        {
-                            force = -(collision.contacts[0].normal) * 2f;
-                        }
-
-                        collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
-                    }
-                    else
-                    {
-                        collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap();
-                    }
-
+                    collision.gameObject.GetComponent<CatchObject_Refactor>().InitOverap();
+                }
+            }
+            // 단일 오브젝트면 단일 오브젝트에 물리력 부여           
+            else
+            {
+                if (checkContact)
+                {
+                    Vector3 force = -(collision.contacts[0].normal * 2f);
+                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
+                }
+                else
+                {
+                    Vector3 force = -(collision.contacts[0].normal * 2f);
+                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
                 }
             }
         }
@@ -202,8 +192,8 @@ public class MovedObject_Refactor : MonoBehaviour
     }
 
     // 충돌지점 본드 체크
-    private void OnCollisionStay(Collision collision)
-    {                    
+    protected virtual void OnCollisionStay(Collision collision)
+    {
         contactObj = collision.gameObject;
 
         // 그랩한 오브젝트가 플레이어 닿을시 임시 캔슬처리
@@ -275,17 +265,18 @@ public class MovedObject_Refactor : MonoBehaviour
                 GameObject collisionObj = collision.gameObject;
                 Collider collider = collisionObj.GetComponent<Collider>();
 
-                if (collisionObj.GetComponent<CatchObject>())
+                if (collisionObj.GetComponent<CatchObject_Refactor>())
                 {                    
-                    combineObj = collisionObj.GetComponent<CatchObject>();
+                    combineObj = collisionObj.GetComponent<CatchObject_Refactor>();
                     SetHash(myColid);
                 }
                 else
-                {                   
+                {        
+                    Debug.Log(1);
                     // 부모 오브젝트의 Combine 상태를 체크한다.
-                    if (collisionObj.GetComponentInParent<CatchObject>())
+                    if (collisionObj.GetComponentInParent<CatchObject_Refactor>())
                     {                       
-                        combineObj = collisionObj.GetComponentInParent<CatchObject>();
+                        combineObj = collisionObj.GetComponentInParent<CatchObject_Refactor>();
                         SetHash(myColid);
                     }
                     // Combine 안된 상태라면 => 고정형 오브젝트, NPC, 그랩이후 해제된 MovedObject들
@@ -299,24 +290,27 @@ public class MovedObject_Refactor : MonoBehaviour
                         else if(collisionObj.layer == LayerMask.NameToLayer(npcLayer))
                         {
                             CreateCatchObject(collider, npcLayer);
-                            SetHash(myColid);                            
+                            SetHash(myColid);
+                            targetNpc = collisionObj.GetComponent<NpcBase>();
+                            targetNpc.ChangedState(npcState.objectAttached);
                         }
                         else if(collisionObj.layer == LayerMask.NameToLayer(movedLayer))
                         {
+                            Debug.Log(2);
                             CreateCatchObject(collider, catchLayer);
                             SetHash(myColid, collisionObj.GetComponent<MeshCollider>());                            
                         }
                     }
 
                 }
-
+                
                 ClearState();
                 GrabGun_Refactor.instance.CancelObj();
             }
         }
     }
 
-    public void ChangedState()
+    public virtual void ChangedState()
     {
         myRigid = GetComponent<Rigidbody>();
         myRigid.mass = 1f;
@@ -326,12 +320,6 @@ public class MovedObject_Refactor : MonoBehaviour
         checkContact = true;
 
     }
-
-    void StartContact()
-    {
-        checkContact = true;
-    }
-
 
     public void CelarBond()
     {
@@ -353,7 +341,7 @@ public class MovedObject_Refactor : MonoBehaviour
         isSleep = false;
     }
 
-    void ClearState()
+    protected virtual void ClearState()
     {
         if (myRigid != null)
         {
@@ -365,7 +353,7 @@ public class MovedObject_Refactor : MonoBehaviour
     }
 
     // 강제 슬립?
-    void SleepObj()
+    protected virtual void SleepObj()
     {
         if (isSleep) return;
 
@@ -373,15 +361,14 @@ public class MovedObject_Refactor : MonoBehaviour
         myRigid.velocity = Vector3.zero;
         Destroy(myRigid);
         myColid.convex = false;
-        isSleep = true;
-        //contactTime = 0f;
+        isSleep = true;        
         ySpeed = 0f;
         gameObject.tag = unContactTag;
 
         Invoke("ClearTime", 1.5f);
     }
 
-    public void InitOverap()
+    public virtual void InitOverap()
     {
         if (!myRigid)
         {
@@ -397,7 +384,7 @@ public class MovedObject_Refactor : MonoBehaviour
         myColid.convex = true;
     }
 
-    public void InitOverap(Vector3 _velocity)
+    public virtual void InitOverap(Vector3 _velocity)
     {
         if (!myRigid)
         {
@@ -438,16 +425,10 @@ public class MovedObject_Refactor : MonoBehaviour
         }
     }
 
-    void ClearTime()
-    {
-        isSleep = false;
-        contactTime = 0;
-    }
-
     /// <summary>
     /// Rigidbody가 존재하는 MovedObject 강제 중력값 넣는 메소드
     /// </summary>
-    private void FallingObject()
+    protected void FallingObject()
     {
         // 내 리지드바디가 존재하고, 그랩한 대상이 아닐 때 (그랩한 대상은 낙하속도 X)
         if (myRigid && !checkContact)
@@ -481,17 +462,16 @@ public class MovedObject_Refactor : MonoBehaviour
     /// </summary>
     /// <param name="collision">충돌한 오브젝트 Collider</param>    
     /// <param name="parentLayer">상위 오브젝트 설정 레이어</param>
-    private void CreateCatchObject(Collider collision, string parentLayer)
+    protected void CreateCatchObject(Collider collision, string parentLayer)
     {
         // 상위 오브젝트 생성 및 Component Setting
         GameObject parentObj = new GameObject(catchObjectName);         // 상위 오브젝트 생성
         parentObj.layer = LayerMask.NameToLayer(parentLayer);           // 상위 오브젝트 Layer 설정
-        combineObj = parentObj.AddComponent<CatchObject>();             // 상위 오브젝트 스크립트 추가
-        GunStateController.AddList(combineObj);                           // Controller에서 재장전시 목록 순회를 위해 HashSet 갱신
+        combineObj = parentObj.AddComponent<CatchObject_Refactor>();             // 상위 오브젝트 스크립트 추가
+        GunStateController.AddList(combineObj);                         // Controller에서 재장전시 목록 순회를 위해 HashSet 갱신
         parentObj.transform.position = collision.ClosestPoint(transform.position);  // 상위 오브젝트 위치 정렬  
     }
-
-    // TODO : 추후에 CatchObject를 MovedObject 상속받게하여 메소드를 공유한다면
+        
     /// <summary>
     /// 생성된 상위 오브젝트에서 관리할 자식 Collider 갱신해주기 위한 메소드
     /// <para>
@@ -499,7 +479,7 @@ public class MovedObject_Refactor : MonoBehaviour
     /// </para>
     /// </summary>    
     /// <param name="colliders">부모 오브젝트에 종속되는 오브젝트들의 MeshCollider</param>
-    void SetHash(params MeshCollider[] colliders)
+    protected void SetHash(params MeshCollider[] colliders)
     {
         for (int i = 0; i < colliders.Length; i++)
         {
@@ -518,7 +498,7 @@ public class MovedObject_Refactor : MonoBehaviour
     /// <summary>
     /// 오브젝트 인스턴스시점에 캐싱할 목록을 묶어두는 메소드
     /// </summary>
-    void StartCaching()
+    protected virtual void StartCaching()
     {
         // 충돌감지 Bool 값 false 설정으로 그랩한 오브젝트만 변환
         checkContact = false;
@@ -531,14 +511,50 @@ public class MovedObject_Refactor : MonoBehaviour
     }    
 
     bool CheckLayer(GameObject contactObj)
-    {        
+    {
+        if (contactObj.layer == LayerMask.NameToLayer("CatchObject") ||
+            contactObj.layer == LayerMask.NameToLayer("Wall") ||
+            contactObj.layer == LayerMask.NameToLayer("InteractZone") ||
+            contactObj.layer == LayerMask.NameToLayer("TriggerObject"))        
+        {            
+            return false;
+        }
+        
+        return true;
+    }
 
-        if (contactObj.layer == LayerMask.GetMask("CatchObject", "Wall"))
+    bool CheckPaint(GameObject contactObj)
+    {
+        if(!contactObj.GetComponent<PaintTarget>().CheckPainted())
         {
             return false;
         }
 
         return true;
     }
+
+    bool CheckTag(GameObject contactObj)
+    {
+        if (contactObj.CompareTag(contactTag))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    #endregion
+
+    #region InvokeMethod
+    void StartContact()
+    {
+        checkContact = true;
+    }
+    void ClearTime()
+    {
+        isSleep = false;
+        contactTime = 0;
+    }
+
     #endregion
 }

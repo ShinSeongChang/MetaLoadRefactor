@@ -125,9 +125,9 @@ public class GunStateController : MonoBehaviour
     [HideInInspector] public NpcBase targetNpc = null;
     [HideInInspector] public GunState state;
     [HideInInspector] public static HashSet<PaintTarget> paintList;
-    [HideInInspector] public static HashSet<MovedObject> bondList;
+    [HideInInspector] public static HashSet<MovedObject_Refactor> bondList;
     [HideInInspector] public static HashSet<NpcBase> npcList;
-    [HideInInspector] public static HashSet<CatchObject> catchList;
+    [HideInInspector] public static HashSet<CatchObject_Refactor> catchList;
 
     Image[] gunImage;
     TextMeshProUGUI gunText;
@@ -206,9 +206,9 @@ public class GunStateController : MonoBehaviour
         SwapLayer();
 
         paintList = new HashSet<PaintTarget>();
-        bondList = new HashSet<MovedObject>();
+        bondList = new HashSet<MovedObject_Refactor>();
         npcList = new HashSet<NpcBase>();
-        catchList = new HashSet<CatchObject>();
+        catchList = new HashSet<CatchObject_Refactor>();
 
         if (!cameraController)
             cameraController = Camera.main.GetComponentInParent<CameraController>();
@@ -530,7 +530,7 @@ public class GunStateController : MonoBehaviour
 
     // 오버로딩 메소드 모음
     #region 오버로딩 메소드 모음
-    public static void AddList(MovedObject obj)
+    public static void AddList(MovedObject_Refactor obj)
     {
         bondList.Add(obj);        
     }
@@ -545,7 +545,7 @@ public class GunStateController : MonoBehaviour
         npcList.Add(obj);
     }
 
-    public static void AddList(CatchObject obj)
+    public static void AddList(CatchObject_Refactor obj)
     {        
         catchList.Add(obj);        
     }

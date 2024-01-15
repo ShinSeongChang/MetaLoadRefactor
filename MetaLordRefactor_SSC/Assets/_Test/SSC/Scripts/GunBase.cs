@@ -150,7 +150,7 @@ abstract public class GunBase : MonoBehaviour
 
             if(hit.transform.GetComponent<MovedObject>() != null)
             {
-                GunStateController.AddList(hit.transform.GetComponent<MovedObject>());
+                GunStateController.AddList(hit.transform.GetComponent<MovedObject_Refactor>());
             }
 
             // TODO : 오브젝트 풀링으로 오버헤드 줄여야 함
