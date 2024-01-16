@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class ToolFunc<T> where T : MonoBehaviour
+public static class ToolFunc<T> where T : Component
 {
 
     public static bool ConatainsCollision(HashSet<T> hs, Collision collision)
@@ -19,5 +19,14 @@ public static class ToolFunc<T> where T : MonoBehaviour
     {
         return x.gameObject.GetInstanceID() == y.gameObject.GetInstanceID();
     }
+
+    public static T[] ReturnToArray(HashSet<T> source)
+    {
+        T[] values = new T[source.Count];
+        source.CopyTo(values);
+
+        return values;
+    }
+
 }
 

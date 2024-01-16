@@ -205,6 +205,7 @@ public class GunStateController : MonoBehaviour
         currentMode = mode[(int)GunMode.Paint];
         SwapLayer();
 
+        // TODO : 씬 넘어가거나 특정 구간에서 HashSet 내용을 비우는 기믹 필요        
         paintList = new HashSet<PaintTarget>();
         bondList = new HashSet<MovedObject_Refactor>();
         npcList = new HashSet<NpcBase>();

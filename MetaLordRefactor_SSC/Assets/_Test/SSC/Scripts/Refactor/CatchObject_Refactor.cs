@@ -1,7 +1,6 @@
-using System.Collections;
-using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class CatchObject_Refactor : MovedObject_Refactor
 {    
@@ -41,12 +40,10 @@ public class CatchObject_Refactor : MovedObject_Refactor
         {
             combineObj = collisionObj.GetComponent<CatchObject_Refactor>();
 
-            CareeToContact(contactObj);   
-            
-            foreach (var child in childColid)
-            {
-                SetHash(child);
-            }
+            combineObj.SetHash(combineObj, ToolFunc<MeshCollider>.ReturnToArray(childColid));
+
+            CareeToContact(contactObj.transform.parent.gameObject);
+ 
         }
         // 충돌한 오브젝트에 CatchObject가 없다면 부모 오브젝트의 Combine 상태를 체크한다.
         else
@@ -56,12 +53,9 @@ public class CatchObject_Refactor : MovedObject_Refactor
             {
                 combineObj = collisionObj.GetComponentInParent<CatchObject_Refactor>();
 
-                CareeToContact(contactObj);
+                combineObj.SetHash(combineObj, ToolFunc<MeshCollider>.ReturnToArray(childColid));
 
-                foreach (var child in childColid)
-                {
-                    SetHash(child);
-                }
+                CareeToContact(contactObj.transform.parent.gameObject);
             }
             // Combine 안된 상태라면 => 고정형 오브젝트, NPC, 그랩이후 해제된 MovedObject들
             else
@@ -70,7 +64,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
 
                 // 고정형과 부딪혔을 때
                 if (collisionObj.layer == LayerMask.NameToLayer(defaultLayer))
-                {                   
+                {
                     gameObject.layer = LayerMask.NameToLayer(defaultLayer);
                 }
                 // NPC와 부딪혔을 때
@@ -84,11 +78,11 @@ public class CatchObject_Refactor : MovedObject_Refactor
                 else if (collisionObj.layer == LayerMask.NameToLayer(movedLayer))
                 {
                     collisionObj.transform.SetParent(transform);
-                    SetHash(collisionObj.GetComponent<MeshCollider>());
+                    SetHash(combineObj, collisionObj.GetComponent<MeshCollider>());
                 }
 
                 SleepObj();
-                
+
             }
 
         }
@@ -110,7 +104,8 @@ public class CatchObject_Refactor : MovedObject_Refactor
         if (collision.gameObject.layer == LayerMask.NameToLayer("MovedObject"))
         {
             if (collision.gameObject.GetComponent<PaintTarget>().CheckPainted() ||
-                isSleep)
+                isSleep ||
+                checkContact)
             {
                 return;
             }   
@@ -155,9 +150,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
             GrabGun.instance.CancelObj();
         }
 
-        // { TODO : 개인 리팩토링
-        #region CustomFallingObject
-        //// 그랩한 MovedObject가 아니면 충돌 포인트 체크
+        // 그랩한 MovedObject가 아니면 충돌 포인트 체크
         if (!checkContact && myRigid)
         {
             // { 이 구간은 1프레임에 벌어진 모든 충돌지점을 검사하는 것
@@ -175,19 +168,18 @@ public class CatchObject_Refactor : MovedObject_Refactor
             }
             // } 이 구간은 1프레임에 벌어진 모든 충돌지점을 검사하는 것
 
-            //유효충돌이 60프레임 이상 벌어졌다면(1초 ? )
+            //유효충돌이 60프레임 이상 벌어졌다면(1초?)
             if (checkCount >= 60)
             {
                 Vector3 tempVelocity = new Vector3(myRigid.velocity.x * decrement, myRigid.velocity.y * decrement, myRigid.velocity.z * decrement);
                 myRigid.velocity = tempVelocity;
+
                 //체크 카운트 초기화, 정지값 체크 증가
                 checkCount = 0;
                 contactTime += 1f;
                 return;
             }
         }
-        #endregion
-        // } TODO : 개인 리팩토링
 
         if (checkContact)
         {
@@ -217,13 +209,8 @@ public class CatchObject_Refactor : MovedObject_Refactor
                 if (collisionObj.GetComponent<CatchObject_Refactor>())
                 {
                     combineObj = collisionObj.GetComponent<CatchObject_Refactor>();
-
-                    CareeToContact(contactObj);
-
-                    foreach (var child in childColid)
-                    {
-                        SetHash(child);
-                    }
+                    combineObj.SetHash(combineObj, ToolFunc<MeshCollider>.ReturnToArray(childColid));
+                    CareeToContact(contactObj.transform.parent.gameObject);
                 }
                 // 충돌한 오브젝트에 CatchObject가 없다면 부모 오브젝트의 Combine 상태를 체크한다.
                 else
@@ -232,13 +219,9 @@ public class CatchObject_Refactor : MovedObject_Refactor
                     if (collisionObj.GetComponentInParent<CatchObject_Refactor>())
                     {
                         combineObj = collisionObj.GetComponentInParent<CatchObject_Refactor>();
+                        combineObj.SetHash(combineObj, ToolFunc<MeshCollider>.ReturnToArray(childColid));
+                        CareeToContact(contactObj.transform.parent.gameObject);
 
-                        CareeToContact(contactObj);
-
-                        foreach (var child in childColid)
-                        {
-                            SetHash(child);
-                        }
                     }
                     // Combine 안된 상태라면 => 고정형 오브젝트, NPC, 그랩이후 해제된 MovedObject들
                     else
@@ -261,7 +244,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
                         else if (collisionObj.layer == LayerMask.NameToLayer(movedLayer))
                         {
                             collisionObj.transform.SetParent(transform);
-                            SetHash(collisionObj.GetComponent<MeshCollider>());
+                            SetHash(combineObj, collisionObj.GetComponent<MeshCollider>());
                         }
 
                         SleepObj();
@@ -296,7 +279,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
     /// <param name="contactObj">충돌한 상위 오브젝트</param>
     void CareeToContact(GameObject contactObj)
     {
-        GameObject[] myChild = new GameObject[transform.childCount];
+        GameObject[] myChild = new GameObject[transform.childCount];        
 
         // 내 자식만큼 오브젝트 캐싱
         for (int i = 0; i < myChild.Length; i++)
@@ -309,7 +292,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
             // 오브젝트 부모 변경 및 해쉬 갱신
             for (int i = 0; i < myChild.Length; i++)
             {
-                myChild[i].transform.SetParent(contactObj.transform);
+                //myChild[i].transform.SetParent(contactObj.transform);
 
                 // Trigger Object Pass
                 if (!myChild[i].GetComponent<MovedObject_Refactor>())
@@ -394,5 +377,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
             obj.convex = false;
         }
     }
+
+    
 
 }

@@ -58,13 +58,13 @@ public class MovedObject_Refactor : MonoBehaviour
     }
 
     protected virtual void OnTriggerEnter(Collider collision)
-    {            
+    {
         // layer 체크용으로 Trigger되는 오브젝트 캐싱
         contactObj = collision.gameObject;
 
         // 트리거를 체크하면 안되는 상황
         if (!CanContact)
-        {            
+        {
             return;
         }
 
@@ -74,53 +74,49 @@ public class MovedObject_Refactor : MonoBehaviour
         // 부딪힌 오브젝트의 Combine 상태를 체크한다.
         // 사실상 여기는 Pass 구간? => 떨어지고 있는 GrabedObject에 갖다 댄다면
         if (collisionObj.GetComponent<CatchObject_Refactor>())
-        {            
+        {
             combineObj = collisionObj.GetComponent<CatchObject_Refactor>();
-            SetHash(myColid);
+            combineObj.SetHash(combineObj, myColid);
         }
         // 충돌한 오브젝트에 CatchObject가 없다면 부모 오브젝트의 Combine 상태를 체크한다.
         else
-        {      
+        {
             // Combine 된 상태라면
             if (collisionObj.GetComponentInParent<CatchObject_Refactor>())
-            {                         
+            {
                 // 해당 부모 오브젝트에 나 자신 종속,
                 combineObj = collisionObj.GetComponentInParent<CatchObject_Refactor>();
-                SetHash(myColid);
-            }            
+                combineObj.SetHash(combineObj, myColid);
+            }
             // Combine 안된 상태라면 => 고정형 오브젝트, NPC, 그랩이후 해제된 MovedObject들
             else
             {
-                Debug.Log(3);
-                Debug.Log(gameObject.name);
-                Debug.Log(contactObj.name);
                 // 고정형과 부딪혔을 때
                 if (collisionObj.layer == LayerMask.NameToLayer(defaultLayer))
                 {
                     CreateCatchObject(GetComponent<Collider>(), defaultLayer);
-                    SetHash(myColid);
+                    combineObj.SetHash(combineObj, myColid);
                 }
                 // NPC와 부딪혔을 때
                 else if (collisionObj.layer == LayerMask.NameToLayer(npcLayer))
                 {
                     CreateCatchObject(GetComponent<Collider>(), npcLayer);
-                    SetHash(myColid);
+                    combineObj.SetHash(combineObj, myColid);
                     targetNpc = collisionObj.GetComponent<NpcBase>();
                     targetNpc.ChangedState(npcState.objectAttached);
                 }
                 // 이동형과 부딪혔을 때
                 else if (collisionObj.layer == LayerMask.NameToLayer(movedLayer))
                 {
-                    Debug.Log(4);
                     CreateCatchObject(GetComponent<Collider>(), catchLayer);
-                    SetHash(myColid, collisionObj.GetComponent<MeshCollider>());
+                    combineObj.SetHash(combineObj, myColid, collisionObj.GetComponent<MeshCollider>());
                 }
             }
-            
+
             ClearState();
             GrabGun_Refactor.instance.CancelObj();
         }
-        
+
     }
 
     //// 그랩한 물건이 이동형 오브젝트와 부딪힐때마다 물리력 행사 콜백
@@ -268,16 +264,15 @@ public class MovedObject_Refactor : MonoBehaviour
                 if (collisionObj.GetComponent<CatchObject_Refactor>())
                 {                    
                     combineObj = collisionObj.GetComponent<CatchObject_Refactor>();
-                    SetHash(myColid);
+                    SetHash(combineObj, myColid);
                 }
                 else
-                {        
-                    Debug.Log(1);
+                {                            
                     // 부모 오브젝트의 Combine 상태를 체크한다.
                     if (collisionObj.GetComponentInParent<CatchObject_Refactor>())
                     {                       
                         combineObj = collisionObj.GetComponentInParent<CatchObject_Refactor>();
-                        SetHash(myColid);
+                        SetHash(combineObj, myColid);
                     }
                     // Combine 안된 상태라면 => 고정형 오브젝트, NPC, 그랩이후 해제된 MovedObject들
                     else
@@ -285,20 +280,19 @@ public class MovedObject_Refactor : MonoBehaviour
                         if(collisionObj.layer == LayerMask.NameToLayer(defaultLayer))
                         {
                             CreateCatchObject(collider, defaultLayer);
-                            SetHash(myColid);                            
+                            SetHash(combineObj, myColid);                            
                         }
                         else if(collisionObj.layer == LayerMask.NameToLayer(npcLayer))
                         {
                             CreateCatchObject(collider, npcLayer);
-                            SetHash(myColid);
+                            SetHash(combineObj, myColid);
                             targetNpc = collisionObj.GetComponent<NpcBase>();
                             targetNpc.ChangedState(npcState.objectAttached);
                         }
                         else if(collisionObj.layer == LayerMask.NameToLayer(movedLayer))
-                        {
-                            Debug.Log(2);
+                        {                            
                             CreateCatchObject(collider, catchLayer);
-                            SetHash(myColid, collisionObj.GetComponent<MeshCollider>());                            
+                            SetHash(combineObj, myColid, collisionObj.GetComponent<MeshCollider>());                            
                         }
                     }
 
@@ -479,15 +473,15 @@ public class MovedObject_Refactor : MonoBehaviour
     /// </para>
     /// </summary>    
     /// <param name="colliders">부모 오브젝트에 종속되는 오브젝트들의 MeshCollider</param>
-    protected void SetHash(params MeshCollider[] colliders)
+    protected void SetHash(CatchObject_Refactor parent, params MeshCollider[] colliders)
     {
         for (int i = 0; i < colliders.Length; i++)
         {
             // HashSet 갱신
-            combineObj.AddChild(colliders[i]);
+            parent.AddChild(colliders[i]);
 
             // 상위 오브젝트에 전달받은오브젝트들 종속
-            colliders[i].transform.SetParent(combineObj.transform);
+            colliders[i].transform.SetParent(parent.transform);
         }
 
         combineObj = null;
@@ -557,4 +551,6 @@ public class MovedObject_Refactor : MonoBehaviour
     }
 
     #endregion
+
+   
 }
