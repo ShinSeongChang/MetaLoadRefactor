@@ -104,8 +104,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
         if (collision.gameObject.layer == LayerMask.NameToLayer("MovedObject"))
         {
             if (collision.gameObject.GetComponent<PaintTarget>().CheckPainted() ||
-                isSleep ||
-                checkContact)
+                isSleep)
             {
                 return;
             }   
@@ -116,11 +115,11 @@ public class CatchObject_Refactor : MovedObject_Refactor
                 if (checkContact)
                 {
                     Vector3 force = -(collision.contacts[0].normal * 2f);
-                    collision.gameObject.GetComponent<CatchObject_Refactor>().InitOverap(force);
+                    collision.gameObject.GetComponentInParent<CatchObject_Refactor>().InitOverap(force);
                 }
                 else
                 {
-                    collision.gameObject.GetComponent<CatchObject_Refactor>().InitOverap();
+                    collision.gameObject.GetComponentInParent<CatchObject_Refactor>().InitOverap();
                 }
             }
             // 단일 오브젝트면 단일 오브젝트에 물리력 부여           
@@ -128,13 +127,12 @@ public class CatchObject_Refactor : MovedObject_Refactor
             {
                 if (checkContact)
                 {
-                    Vector3 force = -(collision.contacts[0].normal * 2f);
+                    Vector3 force = -(collision.contacts[0].normal * 200f);
                     collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
                 }
                 else
-                {
-                    Vector3 force = -(collision.contacts[0].normal * 2f);
-                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
+                {                    
+                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap();
                 }
             }
         }

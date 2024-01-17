@@ -43,7 +43,7 @@ public class MovedObject_Refactor : MonoBehaviour
 
     // 충돌을 감지하면 안되는 상황 묶기    
     protected bool CanContact  => CheckLayer(contactObj) && transform.parent == null && checkContact;
-    protected bool CanOverap => CheckPaint(contactObj) && transform.childCount != 0 && isSleep && CheckTag(contactObj);
+    protected bool CanOverap => !CheckPaint(contactObj) && !isSleep && !CheckTag(contactObj);
 
     #endregion
 
@@ -137,10 +137,10 @@ public class MovedObject_Refactor : MonoBehaviour
 
         }
 
-        if(!CanContact)
-        {
-            return;
-        }
+        //if(!CanContact)
+        //{
+        //    return;
+        //}
 
         if (checkContact)
         {
@@ -148,7 +148,7 @@ public class MovedObject_Refactor : MonoBehaviour
         }
 
         // 충돌한 오브젝트가 이동형 오브젝트라면
-        if (collision.gameObject.layer == LayerMask.NameToLayer("MovedObject"))
+        if (collision.gameObject.layer == LayerMask.NameToLayer(movedLayer))
         {
             // PaintTaget에 bool값 체크 존재, 페인팅된 대상에는 물리력을 부여 x Or 내가 페인팅된 상태면 X Or 특정 불값을 통해 연쇄적으로 서로에게 물리부여 상황 벗어나기
             if (!CanOverap)
@@ -159,29 +159,14 @@ public class MovedObject_Refactor : MonoBehaviour
             // Combine된 오브젝트면 Combine에 물리력 부여           
             if (collision.transform.GetComponentInParent<CatchObject_Refactor>())
             {
-                if (checkContact)
-                {
-                    Vector3 force = -(collision.contacts[0].normal * 2f);
-                    collision.gameObject.GetComponent<CatchObject_Refactor>().InitOverap(force);
-                }
-                else
-                {
-                    collision.gameObject.GetComponent<CatchObject_Refactor>().InitOverap();
-                }
+                Vector3 force = -(collision.contacts[0].normal * 10f);
+                collision.gameObject.GetComponentInParent<CatchObject_Refactor>().InitOverap(force);
             }
             // 단일 오브젝트면 단일 오브젝트에 물리력 부여           
             else
             {
-                if (checkContact)
-                {
-                    Vector3 force = -(collision.contacts[0].normal * 2f);
-                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
-                }
-                else
-                {
-                    Vector3 force = -(collision.contacts[0].normal * 2f);
-                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
-                }
+                Vector3 force = -(collision.contacts[0].normal * 10f);
+                collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
             }
         }
 
@@ -312,6 +297,7 @@ public class MovedObject_Refactor : MonoBehaviour
         myColid.material.bounciness = 0f;
         checkCount = 0;
         checkContact = true;
+        isSleep = false;
 
     }
 
@@ -384,7 +370,8 @@ public class MovedObject_Refactor : MonoBehaviour
         {
             transform.AddComponent<Rigidbody>();
             myRigid = GetComponent<Rigidbody>();
-            myRigid.velocity = _velocity;
+            myRigid.AddForce(_velocity, ForceMode.VelocityChange);
+            //myRigid.velocity = _velocity;
             myRigid.mass = 10f;
 
         }
@@ -519,22 +506,12 @@ public class MovedObject_Refactor : MonoBehaviour
 
     bool CheckPaint(GameObject contactObj)
     {
-        if(!contactObj.GetComponent<PaintTarget>().CheckPainted())
-        {
-            return false;
-        }
-
-        return true;
+        return contactObj.GetComponent<PaintTarget>().CheckPainted();
     }
 
     bool CheckTag(GameObject contactObj)
     {
-        if (contactObj.CompareTag(contactTag))
-        {
-            return false;
-        }
-
-        return true;
+        return contactObj.CompareTag(contactTag);
     }
 
     #endregion
