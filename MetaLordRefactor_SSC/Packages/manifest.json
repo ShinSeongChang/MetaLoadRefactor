@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.rorygames.vhacd": "https://github.com/rorygames/VHACD.git?path=/com.rorygames.vhacd",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.animation.rigging": "1.2.1",
     "com.unity.cinemachine": "2.9.7",
@@ -9,7 +10,6 @@
     "com.unity.memoryprofiler": "1.1.0",
     "com.unity.postprocessing": "3.2.2",
     "com.unity.probuilder": "5.1.1",
-    "com.unity.robotics.vhacd": "https://github.com/Unity-Technologies/VHACD.git?path=/com.unity.robotics.vhacd",
     "com.unity.splines": "2.4.0",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.timeline": "1.7.5",

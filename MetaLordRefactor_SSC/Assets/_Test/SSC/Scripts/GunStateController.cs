@@ -48,6 +48,11 @@ public class GunStateController : MonoBehaviour
     [SerializeField] private GameObject GunUi;
     [SerializeField] private Sprite[] crossHairSprite = new Sprite[3];
 
+    public bool GetOnClimbe()
+    {
+        return player.OnClimbAnimation;
+    }
+
     public Rigidbody GetConnectObject()
     {
         return player.GetConnectRigidBody();
@@ -228,6 +233,20 @@ public class GunStateController : MonoBehaviour
 
     private void Update()
     {
+        if(Input.GetKeyDown(KeyCode.T))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            if(Physics.Raycast(ray, out hit, 100f, gunLayer))
+            {
+                Debug.Log("uv좌표 : " + hit.textureCoord);
+                Debug.Log("uv좌표2 : " + hit.textureCoord2);
+            }
+
+            Debug.Log("값은? : " + PaintTarget.RayChannel(ray, ray, 100f, gunLayer));
+            
+        }
         //레이캐스트 업데이트
         UpdateRaycast();
     }

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using VHACD.Unity;
 
 public enum PaintDebug
 {
@@ -154,7 +155,7 @@ public class PaintTarget : MonoBehaviour
     {
         RaycastHit hit;
         if (Physics.Raycast(ray, out hit, Length, layer) || Physics.Raycast(subRay, out hit, Length*2, layer))
-        {
+        {            
             PaintTarget paintTarget = hit.collider.gameObject.GetComponent<PaintTarget>();
             if (!paintTarget) return -1;
             if (!paintTarget.validTarget) return -1;
@@ -162,29 +163,31 @@ public class PaintTarget : MonoBehaviour
 
             Renderer r = paintTarget.GetComponent<Renderer>();
             if (!r) return -1;
+            
 
             RenderTexture rt = (RenderTexture)r.sharedMaterial.GetTexture("_SplatTex");
             if (!rt) return -1;
+            
 
             UpdatePickColors(paintTarget, rt);
 
             Texture2D tc = paintTarget.splatTexPick;
             if (!tc) return -1;
+                   
 
             int x = (int)(hit.textureCoord2.x * tc.width);
             int y = (int)(hit.textureCoord2.y * tc.height);
 
 
             //Color pc = GetColorByComputeShader(paintTarget, x, y);
-            Color pc = tc.GetPixel(x, y);
-
+            Color pc = tc.GetPixel(x, y);            
             int l = -1;
             if (pc.r > .3) l = 0;
             if (pc.g > .5) l = 1;
             if (pc.b > .5) l = 2;
             if (pc.a > .5) l = 3;
 
-
+            
             return l;
         }
 
@@ -229,8 +232,7 @@ public class PaintTarget : MonoBehaviour
 
             return l;
         }
-
-        //Debug.Break();
+        
         return -1;
     }
 
@@ -617,7 +619,8 @@ public class PaintTarget : MonoBehaviour
         }
 
         validTarget = true;
-
+        //ComplexColliderData mc = this.GetComponent<ComplexColliderData>();
+        //ComplexCollider mc = this.GetComponent<ComplexCollider>();
         MeshCollider mc = this.GetComponent<MeshCollider>();
         if (mc != null) bHasMeshCollider = true;
     }

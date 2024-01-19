@@ -86,7 +86,9 @@ public class GrabGun_Refactor : GunBase
     {
         if (targetRigid)
         {
-            if (state.GetConnectObject() == targetRigid)
+            Debug.Log("등산 : " + state.GetOnClimbe());
+
+            if (state.GetConnectObject() == targetRigid || state.GetOnClimbe())
             {
                 CancelObj();
                 return;

@@ -85,8 +85,9 @@ public class GrabGun : GunBase
     public void GrabObj()
     {
         if (targetRigid)
-        {
-            if (state.GetConnectObject() == targetRigid)
+        {            
+
+            if (state.GetConnectObject() == targetRigid || state.GetOnClimbe())
             {
                 CancelObj();
                 return;
