@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 ////12.12 HJ 추가
-[System.Serializable]
+//[System.Serializable]
 public class StatusDialogue
 {
     public string dialogueID; //대사 ID

@@ -42,14 +42,14 @@ public class MovedObject_Refactor : MonoBehaviour
     #region Property
 
     // 충돌을 감지하면 안되는 상황 묶기    
-    protected bool CanContact  => CheckLayer(contactObj) && transform.parent == null && checkContact;
+    protected bool CanContact  => CheckLayer(contactObj) && checkContact;
     protected bool CanOverap => !CheckPaint(contactObj) && !isSleep && !CheckTag(contactObj);
 
     #endregion
 
     void Awake()
     {
-        StartCaching();      
+        StartCaching();        
     }
 
     void Update()
@@ -225,7 +225,8 @@ public class MovedObject_Refactor : MonoBehaviour
         }
         
         if (!CanContact)
-        {            
+        {
+            Debug.Log(1);
             return;
         }
 
@@ -243,9 +244,11 @@ public class MovedObject_Refactor : MonoBehaviour
 
             if (PaintTarget.RayChannel(ray, 1.5f, layerMask) == 0 && collision.gameObject.GetComponent<Controller_Physics>() == null && checkContact)
             {
+                Debug.Log("?????");
                 GameObject collisionObj = collision.gameObject;
                 Collider collider = collisionObj.GetComponent<Collider>();
 
+                // 충돌 오브젝트의 Combine 상태를 체크한다.
                 if (collisionObj.GetComponent<CatchObject_Refactor>())
                 {                    
                     combineObj = collisionObj.GetComponent<CatchObject_Refactor>();
@@ -275,7 +278,8 @@ public class MovedObject_Refactor : MonoBehaviour
                             targetNpc.ChangedState(npcState.objectAttached);
                         }
                         else if(collisionObj.layer == LayerMask.NameToLayer(movedLayer))
-                        {                            
+                        {
+                            Debug.Log("엥?");
                             CreateCatchObject(collider, catchLayer);
                             SetHash(combineObj, myColid, collisionObj.GetComponent<MeshCollider>());                            
                         }
@@ -291,8 +295,14 @@ public class MovedObject_Refactor : MonoBehaviour
 
     public virtual void ChangedState()
     {
-        myRigid = GetComponent<Rigidbody>();
-        myRigid.mass = 1f;
+        if(!GetComponent<Rigidbody>())
+        {
+            myRigid = transform.AddComponent<Rigidbody>();
+            myRigid = GetComponent<Rigidbody>();
+            myRigid.mass = 1f;
+        }
+
+        myColid.convex = true;
         myColid.material.dynamicFriction = 0f;
         myColid.material.bounciness = 0f;
         checkCount = 0;
@@ -370,8 +380,7 @@ public class MovedObject_Refactor : MonoBehaviour
         {
             transform.AddComponent<Rigidbody>();
             myRigid = GetComponent<Rigidbody>();
-            myRigid.AddForce(_velocity, ForceMode.VelocityChange);
-            //myRigid.velocity = _velocity;
+            myRigid.AddForce(_velocity, ForceMode.VelocityChange);            
             myRigid.mass = 10f;
 
         }
@@ -398,8 +407,7 @@ public class MovedObject_Refactor : MonoBehaviour
         {
             myChild[i] = transform.GetChild(i).gameObject;
         }
-
-        // 오브젝트 부모 변경 및 해쉬 갱신
+        
         for (int i = 0; i < myChild.Length; i++)
         {
             Destroy(myChild[i].gameObject);

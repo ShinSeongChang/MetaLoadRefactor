@@ -1,20 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static Controller_Physics;
 
 public class GrabGun_Refactor : GunBase
 {
     public static GrabGun_Refactor instance;    
-    protected override void Awake()
-    {
-        base.Awake();
-
-        instance = this;
-        brush.splatChannel = 2;        
-        mode = GunMode.Grab;
-        excludedLayer = LayerMask.NameToLayer("Player");
-    }
-
     public int GrabShot { get { return -ammo; } set { ammo = -value; } }
 
     int excludedLayer;
@@ -23,9 +14,21 @@ public class GrabGun_Refactor : GunBase
     List<Collider> colliders;
     string grabCancelText = "그랩취소";
 
+    protected override void Awake()
+    {
+        base.Awake();
+
+        instance = this;
+        brush.splatChannel = 2;        
+        mode = GunMode.Grab;
+        excludedLayer = LayerMask.NameToLayer("Player");
+        myLayer = 1 << LayerMask.GetMask("MovedObject", "GrabedObject");
+    }
+
+
     public override bool ShootGun()
     {
-        // 언락전 우클릭 입력시 UI 텍스트 출력
+        // 모드 해금전 사격 입력시 UI 출력
         if(!state.UsedGrabGun())
         {
             if(state.CanFire)
@@ -37,38 +40,24 @@ public class GrabGun_Refactor : GunBase
             return false;
         }
 
-        if(CheckCanFire() == false)
-        {
-            // onGrab 상태에서도 들고있는 물건 그랩 해제를 위해
-            if (targetRigid || state.Ammo < -ammo)
-            {
-                CancelObj();
-                return false;
-            }
-
-            state.CheckRangeCrossHair();
-            return false;
-        }
-
         return OneShotGrab();
     }
 
     bool OneShotGrab()
     {
+        // 크로스헤어 변경
+        state.CheckRangeCrossHair();
+
+        // 그랩중인 상태일 때 사격 입력이 되었다면
         if (targetRigid || state.Ammo < - ammo)
         {            
+            // 들고있는 그랩상태 해제
             CancelObj();
             return false;
         }
 
-        if (state.hit.transform == null)
-        {
-            return false;
-        }
-        // TODO : 임시야매로 그랩건의 오브젝트 그랩 남발 방지
-        else if (state.hit.transform.gameObject.layer != LayerMask.NameToLayer("MovedObject") &&
-            state.hit.transform.gameObject.layer != LayerMask.NameToLayer("GrabedObject") ||
-            state.hit.transform.parent?.gameObject.layer == LayerMask.NameToLayer("NPC"))
+        // GunBase와 개별적인 레이어 체크
+        if (!CheckLayer())
         {            
             return false;
         }
@@ -85,22 +74,12 @@ public class GrabGun_Refactor : GunBase
     public void GrabObj()
     {
         if (targetRigid)
-        {
-            Debug.Log("등산 : " + state.GetOnClimbe());
-
+        {            
             if (state.GetConnectObject() == targetRigid || state.GetOnClimbe())
             {
                 CancelObj();
                 return;
             }
-
-            //Vector3 wantValue = state.pickupPoint.position + (state.cameraController.GetGrabOffset(offset));
-            //Vector3 up = Vector3.Cross(state.pickupPoint.right, state.pickupPoint.forward);
-            //Vector3 right = Vector3.Cross(state.pickupPoint.up, state.pickupPoint.forward);
-            //float distance = Vector3.Distance(target, pickup);
-
-            //Vector3 target = targetRigid.position - targetRigid.position.y * Vector3.up;
-            //Vector3 pickup = state.pickupPoint.position - state.pickupPoint.position.y * Vector3.up;
 
             state.cameraController.RotateSomethingAtCameraCenter(state.grabCorrectPoint);
 
@@ -111,14 +90,6 @@ public class GrabGun_Refactor : GunBase
             state.grabLine.SetPosition(0, state.GunHolderHand.position);
             state.grabLine.SetPosition(1, state.pickupPoint.position);
 
-           /* Debug.Log(dir.magnitude);
-            if(targetRigid.CompareTag("ContactObject") )
-            {
-                RaycastHit hit;
-                Physics.Raycast(targetRigid.position, dir, out hit, 100, myLayer);
-                targetRigid.AddForce(dir + hit.normal *.5f);
-            }          
-            else*/ 
             if (dir.magnitude > .5f && dir.magnitude <50)
             {
                 Vector3 power = dir * state.speed;
@@ -126,16 +97,12 @@ public class GrabGun_Refactor : GunBase
                     power = power.normalized * 100;
                 targetRigid.velocity = Vector3.zero;
                 targetRigid.AddForce(power, ForceMode.VelocityChange);
-                //targetRigid.velocity = dir.normalized * scala;
-                //targetRigid.rotation = state.grabCorrectPoint.rotation;
-                //targetRigid.velocity += state.pickupPoint.forward * distance;
-                //targetRigid.velocity =  up* -dir.y * 3 + right* dir.x * 3 + state.pickupPoint.forward * dir.z * 3;
+
             }
             else if(dir.magnitude <= .5f)
             {
                 targetRigid.velocity = Vector3.zero;
                 targetRigid.AddForce(dir.normalized);
-                //targetRigid.position = state.grabCorrectPoint.position;
             }
             else 
             {
@@ -173,9 +140,7 @@ public class GrabGun_Refactor : GunBase
         if (targetObj?.GetComponent<CatchObject_Refactor>() != null)
         {
             targetObj.GetComponent<CatchObject_Refactor>().CancelGrab();
-        }
-
-        //Debug.LogWarning(Physics.reuseCollisionCallbacks);
+        }        
 
         state.cameraController.ClearGrabObject();
         if(colliders !=null && colliders.Count > 0)
@@ -193,89 +158,28 @@ public class GrabGun_Refactor : GunBase
         state.onGrab = false;        
     }
 
-    /*public void CancleGrab()
-    {
-        targetObj.GetComponent<Collider>().material.dynamicFriction = 1f;
-        targetObj = null;
-        state.grabLine.enabled = false;
-        targetRigid = null;
-        state.onGrab = false;
-       // state.isShootingState = false;
-    }*/
-
     void FollowingObj( )
     {
         state.onGrab = true;
         targetObj = state.hit.transform.gameObject;        
 
-        // 그랩 대상의 부모가 없다면
-        if (targetObj.transform.parent == null)
-        {            
-            // 떨어지고 있는 오브젝트라면
-            if(targetObj.GetComponent<Rigidbody>() == null)
-            {                
-                targetObj.GetComponent<MeshCollider>().convex = true;
-                targetObj.AddComponent<Rigidbody>();
-                targetObj.GetComponent<MovedObject_Refactor>().ChangedState();
-            }
-            else
-            {
-                // 조합된 오브젝트라면
-                if(targetObj.GetComponent<CatchObject_Refactor>() != null)
-                {
-                    targetObj.GetComponent<CatchObject_Refactor>().SetUpMesh();
-                    targetObj.GetComponent<CatchObject_Refactor>().ChangedState();
-                }
-                else
-                {
-                    targetObj.GetComponent<MeshCollider>().convex = true;
-                    targetObj.GetComponent<MovedObject_Refactor>().ChangedState();
-
-                }
-
-            }
+        // 단일 객체이면
+        // => CatchObject 이지만 Rigidbody가 없는 상태면 결국 MovedObject만 찍힘
+        // => 해당 if문 안에서 한번더 검사가 필요할듯?
+        if(targetObj.GetComponent<MovedObject_Refactor>())
+        {
+            targetObj.GetComponent<MovedObject_Refactor>().ChangedState();            
         }
-        // 그랩 대상의 부모가 있다면
+        // 조합된 오브젝트라면
         else
         {
-            // 고정형 오브젝트 경우
-            if (targetObj.transform.parent.gameObject.layer == LayerMask.NameToLayer("Default"))
-            {                
-                // 고정형 부모 오브젝트에 클래스를 검사하여 그랩 취소
-                if(targetObj.transform.parent.gameObject.GetComponent<CatchObject_Refactor>() != null)
-                {
-                    state.onGrab = false;
-                    return;
-                }
-
-                // 종속해제
-                targetObj.transform.parent = null;
-                targetObj.GetComponent<MeshCollider>().convex = true;
-                targetObj.AddComponent<Rigidbody>();
-                targetObj.GetComponent<MovedObject_Refactor>().ChangedState();
-
-            }
-            // 상위 오브젝트 경우
-            else if (targetObj.transform.parent.gameObject.layer == LayerMask.NameToLayer("GrabedObject"))
-            {                
-                // 그랩 대상을 상위 오브젝트로 변경
-                targetObj = targetObj.transform.parent.gameObject;
-                CatchObject_Refactor controll = targetObj.GetComponent<CatchObject_Refactor>();
-                controll.SetUpMesh();
-                targetObj.AddComponent<Rigidbody>();
-                targetRigid = targetObj.GetComponent<Rigidbody>();
-                controll.ChangedState();
-            }
-
+            CatchObject_Refactor controll = targetObj.GetComponent<CatchObject_Refactor>();
+            controll.ChangedState();            
+            controll.SetUpMesh();
         }
-
-
-
-        // state.cameraController.SetGrabObject(targetObj.transform);
 
         targetRigid = targetObj.GetComponent<Rigidbody>();
         colliders = targetRigid.GetComponentsInChildren<Collider>().ToList();
-
 
         if (colliders != null && colliders.Count > 0)
         {
@@ -295,8 +199,7 @@ public class GrabGun_Refactor : GunBase
         targetRigid.excludeLayers &= ~(1 << excludedLayer);
         targetRigid.constraints = RigidbodyConstraints.FreezeRotation;
         targetRigid.useGravity = false;
-        targetRigid.mass *= 2;
-        //state.isShootingState = true;
+        targetRigid.mass *= 2;        
 
         if (state.Ammo >= -ammo)
         {
@@ -308,18 +211,30 @@ public class GrabGun_Refactor : GunBase
 
     protected override bool CheckCanFire()
     {
+        // PC 발아래 체크 => 내 발 아래있는 오브젝트는 Grab 안함
         Vector3 start = state.checkPos.position;
         start.y -= 2f;
         Ray checkRay = new Ray(start, -(state.checkPos.up));
         RaycastHit hit;
-        Physics.SphereCast(checkRay, 2f, out hit, 20f, myLayer);        
+        Physics.SphereCast(checkRay, 2f, out hit, 20f, myLayer);                
 
-        if (!state.CanFire || hit.transform?.gameObject == state.hit.transform?.gameObject || !state.UsedGrabGun())
+        if (!state.CanFire || hit.transform?.gameObject == state.hit.transform?.gameObject)
         {
             return false;        
         }
 
         return true;
+    }
+
+    bool CheckLayer()
+    {
+        if (state.hit.transform?.gameObject.layer == LayerMask.NameToLayer("MovedObject") ||
+            state.hit.transform?.gameObject.layer == LayerMask.NameToLayer("GrabedObject"))
+        {            
+            return true;
+        }
+
+        return false;
     }
 
 }

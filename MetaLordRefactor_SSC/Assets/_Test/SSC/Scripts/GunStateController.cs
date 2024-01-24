@@ -233,20 +233,6 @@ public class GunStateController : MonoBehaviour
 
     private void Update()
     {
-        if(Input.GetKeyDown(KeyCode.T))
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-
-            if(Physics.Raycast(ray, out hit, 100f, gunLayer))
-            {
-                Debug.Log("uv좌표 : " + hit.textureCoord);
-                Debug.Log("uv좌표2 : " + hit.textureCoord2);
-            }
-
-            Debug.Log("값은? : " + PaintTarget.RayChannel(ray, ray, 100f, gunLayer));
-            
-        }
         //레이캐스트 업데이트
         UpdateRaycast();
     }
@@ -276,7 +262,21 @@ public class GunStateController : MonoBehaviour
         Ray defaultRay = new Ray(startPlayerPos, (endPos - startPlayerPos).normalized);
 
         float distance = Vector3.Distance(Camera.main.transform.position, GetOriginPos());
-        
+
+        // 현재 Unlock상태인 모드 UI를 출력중이라면 Pass
+        if (crossHair.sprite == crossHairSprite[(int)CrossHair.LOCK])
+        {
+ 
+        }
+        else
+        {
+            //// 현재 상태에 맞게 크로스헤어 이미지 업데이트 해주는 조건문
+            ChangedCrossHair();
+            gunText.gameObject.SetActive(true);
+            crossHair.gameObject.SetActive(true);
+        }
+
+
         // 일반적인 상황의 사격
         if (Physics.Raycast(normalRay, out hit, range, gunLayer))
         {
@@ -305,49 +305,25 @@ public class GunStateController : MonoBehaviour
                 if (Physics.Raycast(defaultRay, out hit, distancePlayerToHit, gunLayer))
                 {
                     player.SetAimPosition(hit.point+defaultRay.direction*10);
-                    // Debug.Log("4");
-                    // Debug.Log("플레이어->디폴트히트포인트");
                     startPoint = startPlayerPos;
                     checkSuccessRay = true;
-                    minDistance = false;                    
-                    //crossHair.color = CanFire && currentMode.CanFireAmmoCount() ? Color.green : Color.red;
-
-                    //if (!currentMode.CanFireAmmoCount() && !onGrab && !currentMode.fireStart)
-                    //{
-                    //    //Debug.Log("1");
-                    //    gunImage[WarningImgIdx].GetComponent<UiFadeOut>().InitFadeOut();
-                    //    ChangedCrossHair();
-                    //}
-                   // Debug.Log("?");
-
-                    //Vector3 anchor = Camera.main.WorldToScreenPoint(hit.point);
-                    //if (RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)crossHair.transform.parent, anchor, null, out Vector2 localPoint))
-                    {
-                        //crossHair.rectTransform.anchoredPosition = localPoint;
-                    }
+                    minDistance = false;
 
                     if (crossHair.sprite == crossHairSprite[(int)CrossHair.LOCK])
                     {
-                        if (crosshairFadeOut != null)
-                        {                            
-                            //StopCoroutine(crosshairFadeOut);
-                            return;
-                        }
 
-                        crosshairFadeOut = StartCoroutine(IEFadeOutCrosshair());
                     }
                     else
                     {
+                        //// 현재 상태에 맞게 크로스헤어 이미지 업데이트 해주는 조건문
                         ChangedCrossHair();
+                        gunText.gameObject.SetActive(true);
+                        crossHair.gameObject.SetActive(true);
                     }
 
-                    //ChangedCrossHair();
-                    //Debug.Log(1);
                     return;
                 }
             }
-
-
             //카메라->끝점 range 이상 경우
             else
             {
@@ -355,92 +331,26 @@ public class GunStateController : MonoBehaviour
                 startPoint = startCameraPos;
                 checkSuccessRay = true;
                 minDistance = false;
-                //crossHair.color = CanFire && currentMode.CanFireAmmoCount() ? Color.green : Color.red;
-
-                //if (!currentMode.CanFireAmmoCount() && !onGrab && !currentMode.fireStart)
-                //{
-                //    //Debug.Log("2");
-                //    gunImage[WarningImgIdx].GetComponent<UiFadeOut>().InitFadeOut();
-                //    ChangedCrossHair();
-                //}
-
-                //if (crossHair.rectTransform.anchoredPosition != Vector2.zero)
-                {
-                   // crossHair.rectTransform.anchoredPosition = Vector2.zero;
-                }
 
                 if (crossHair.sprite == crossHairSprite[(int)CrossHair.LOCK])
                 {
-                    //if (crosshairFadeOut != null)
-                    //{
-                    //        Debug.Log(2);
-                    //    //StopCoroutine(crosshairFadeOut);
-                    //    return;
-                    //}
 
-                    //crosshairFadeOut = StartCoroutine(IEFadeOutCrosshair());
                 }
                 else
                 {
+                    //// 현재 상태에 맞게 크로스헤어 이미지 업데이트 해주는 조건문
                     ChangedCrossHair();
+                    gunText.gameObject.SetActive(true);
+                    crossHair.gameObject.SetActive(true);
                 }
 
-                //ChangedCrossHair();                              
-                //Debug.Log(2);
+
                 return;
             }
         }
 
         player.SetAimPosition(Vector3.zero);
         checkSuccessRay = false;
-
-        // 현재 상태에 맞게 크로스헤어 이미지 업데이트 해주는 조건문
-        if (!onGrab && !currentMode.CanFireAmmoCount() && !currentMode.fireStart)
-        {
-            //Debug.Log(3);
-            // 내가 총알 잔량이 부족하면서, 그랩하고있는 상태가 아닐 때 재장전 필요 효과 발생
-
-            if (crossHair.sprite == crossHairSprite[(int)CrossHair.LOCK])
-            {
-                //if (crosshairFadeOut != null)
-                //{
-                //            Debug.Log(3);
-                //    //StopCoroutine(crosshairFadeOut);
-                //    return;
-                //}
-
-                //crosshairFadeOut = StartCoroutine(IEFadeOutCrosshair());
-            }
-            else
-            {
-                ChangedCrossHair();
-            }
-
-            //gunImage[WarningImgIdx].GetComponent<UiFadeOut>().InitFadeOut();
-            //ChangedCrossHair();
-        }
-        else
-        {
-            //Debug.Log(3);
-            if (crossHair.sprite == crossHairSprite[(int)CrossHair.LOCK])
-            {
-                //if (crosshairFadeOut != null)
-                //{
-                //            Debug.Log(4);
-                //    //StopCoroutine(crosshairFadeOut);
-                //    return;
-                //}
-
-                //crosshairFadeOut = StartCoroutine(IEFadeOutCrosshair());
-            }
-            else
-            {
-                ChangedCrossHair();
-            }
-            // 디폴트 이미지
-            //crossHair.color = Color.green;
-            //crossHair.sprite = crossHairSprite[(int)CrossHair.ABLE];
-        }
 
     }
 
@@ -529,7 +439,7 @@ public class GunStateController : MonoBehaviour
 
         while (timeCheck <= reloadTime)
         {
-            timeCheck += Time.deltaTime;
+            timeCheck += Time.unscaledDeltaTime;
             t = timeCheck / reloadTime;
 
             int ammoValue = (int)Mathf.Lerp(currentAmmo, maxAmmo, reloadCurve.Evaluate(t));
@@ -710,8 +620,20 @@ public class GunStateController : MonoBehaviour
     }
 
     public void ChangedCrossHair()
-    {
-        if(crosshairFadeOut != null)
+    {        
+        if(Controller_Physics.stopState)
+        {    
+            crossHair.color = Color.green;
+            crossHair.sprite = crossHairSprite[(int)CrossHair.ABLE];
+            gunText.gameObject.SetActive(false);
+            crossHair.gameObject.SetActive(false);
+
+            StopAllCoroutines();
+
+            return;
+        }
+
+        if (crosshairFadeOut != null)
         {
             StopCoroutine(crosshairFadeOut);
         }
@@ -728,6 +650,7 @@ public class GunStateController : MonoBehaviour
         else
         {
             if (onGrab) return;
+            if (Controller_Physics.stopState) return;
 
             if(textFadeOut != null)
             {
@@ -776,8 +699,7 @@ public class GunStateController : MonoBehaviour
     {
         if (crosshairFadeOut != null)
         {
-            StopCoroutine(crosshairFadeOut);
-            //return;
+            StopCoroutine(crosshairFadeOut);            
         }
 
         crosshairFadeOut = StartCoroutine(IEFadeOutCrosshair());

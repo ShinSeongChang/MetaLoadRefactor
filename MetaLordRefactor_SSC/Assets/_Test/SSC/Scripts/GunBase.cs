@@ -3,20 +3,13 @@ using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
 
-public static class StringExtensions
-{
-    public static string RemoveSpaces(this string input)
-    {
-        return input.Replace(" ", "");
-    }
-}
-
 abstract public class GunBase : MonoBehaviour
 {
     protected Rigidbody conectedBody;
     protected GunStateController state;
     protected Brush brush = null;
     protected Transform AimTarget = null;
+
     [SerializeField]
     protected int ammo;
     public bool fireStart = false;
@@ -120,38 +113,6 @@ abstract public class GunBase : MonoBehaviour
 
             //Vector3 tempSize = new Vector3(side1, side2, 0.1f);
 
-            Mesh mesh = hit.collider.GetComponent<MeshFilter>().mesh;
-            Vector3[] vertices = mesh.vertices;
-            int[] triangles = mesh.triangles;
-
-            // 충돌 지점의 로컬 좌표를 구합니다.
-            Vector3 localHitPoint = hit.collider.transform.InverseTransformPoint(hit.point);
-
-            // 충돌 지점이 속한 삼각형을 찾습니다.
-            for (int i = hit.triangleIndex; i < hit.triangleIndex + 3; i += 3)
-            {
-                Debug.Log("몇번 도는지 : " + i);
-                Vector3 v1 = vertices[triangles[i]];
-                Vector3 v2 = vertices[triangles[i + 1]];
-                Vector3 v3 = vertices[triangles[i + 2]];
-
-                // 삼각형 내부에 있는지 확인
-                if (PointInTriangle(localHitPoint, v1, v2, v3))
-                {
-                    // 삼각형의 면적을 계산
-                    float area = Vector3.Cross(v2 - v1, v3 - v1).magnitude / 2f;
-
-                    // 면적에 맞는 Collider 생성
-                    GameObject colliderObject = new GameObject("CustomCollider");
-                    colliderObject.transform.position = hit.point;
-                    colliderObject.transform.SetParent(hit.collider.transform);
-                    colliderObject.AddComponent<BoxCollider>().size = new Vector3(area, 0.1f, area);
-
-                    break;
-                }
-            }
-
-
             // TODO : 개인 리팩토링
 
             //if (hit.transform.GetComponent<MovedObject>() != null)
@@ -217,22 +178,6 @@ abstract public class GunBase : MonoBehaviour
         state.checkAmmo += usingAmmo;
         float timeCheck = 0;
 
-        //if (state.checkAmmo <= 0)
-        //{            
-        //    state.checkAmmo = 0;
-        //    state.UpdateState(state.checkAmmo, GunState.EMPTY);
-        //}
-
-        //while (timeCheck < state.lerpTime)
-        //{            
-        //    timeCheck += Time.deltaTime;
-        //    float t = timeCheck / state.lerpTime;
-
-        //    int value = (int)Mathf.Lerp(currentAmmo, state.checkAmmo, t);
-        //    state.UpdateState(value);
-        //    yield return Time.deltaTime;
-        //}
-
         if (state.checkAmmo <= 0)
         {
             state.checkAmmo = 0;
@@ -263,21 +208,4 @@ abstract public class GunBase : MonoBehaviour
             }
         }
     }
-
-    // 점이 삼각형 내부에 있는지 확인하는 함수
-    bool PointInTriangle(Vector3 p, Vector3 p0, Vector3 p1, Vector3 p2)
-    {
-        float dX = p.x - p2.x;
-        float dY = p.y - p2.y;
-        float dX21 = p2.x - p1.x;
-        float dY12 = p1.y - p2.y;
-        float D = dY12 * (p0.x - p2.x) + dX21 * (p0.y - p2.y);
-        float s = dY12 * dX + dX21 * dY;
-        float t = (p2.y - p0.y) * dX + (p0.x - p2.x) * dY;
-        if (D < 0)
-            return s <= 0 && t <= 0 && s + t >= D;
-        return s >= 0 && t >= 0 && s + t <= D;
-    }
-
-
 }

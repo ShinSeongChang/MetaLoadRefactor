@@ -258,6 +258,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
 
     public override void ChangedState()
     {
+        myRigid = transform.AddComponent<Rigidbody>();
         myRigid = GetComponent<Rigidbody>();
         myRigid.mass = 10f;        
         checkCount = 0;
