@@ -216,9 +216,11 @@ public class CatchObject_Refactor : MovedObject_Refactor
                     // Combine 된 상태라면
                     if (collisionObj.GetComponentInParent<CatchObject_Refactor>())
                     {
+                        Debug.Log(1);
                         combineObj = collisionObj.GetComponentInParent<CatchObject_Refactor>();
                         combineObj.SetHash(combineObj, ToolFunc<MeshCollider>.ReturnToArray(childColid));
                         CareeToContact(contactObj.transform.parent.gameObject);
+                        //combineObj.SetUpMesh();
 
                     }
                     // Combine 안된 상태라면 => 고정형 오브젝트, NPC, 그랩이후 해제된 MovedObject들

@@ -225,15 +225,14 @@ public class MovedObject_Refactor : MonoBehaviour
         }
         
         if (!CanContact)
-        {
-            Debug.Log(1);
+        {            
             return;
         }
 
         if (checkContact)
         {
             gameObject.tag = contactTag;
-        }
+        }        
 
         // 충돌이 일어나는 지점을 모두 체크
         for (int i = 0; i < collision.contactCount; i++)
@@ -243,8 +242,7 @@ public class MovedObject_Refactor : MonoBehaviour
             Ray ray = new Ray(collision.contacts[i].point + dir, -dir);
 
             if (PaintTarget.RayChannel(ray, 1.5f, layerMask) == 0 && collision.gameObject.GetComponent<Controller_Physics>() == null && checkContact)
-            {
-                Debug.Log("?????");
+            {                
                 GameObject collisionObj = collision.gameObject;
                 Collider collider = collisionObj.GetComponent<Collider>();
 
@@ -278,8 +276,7 @@ public class MovedObject_Refactor : MonoBehaviour
                             targetNpc.ChangedState(npcState.objectAttached);
                         }
                         else if(collisionObj.layer == LayerMask.NameToLayer(movedLayer))
-                        {
-                            Debug.Log("엥?");
+                        {                            
                             CreateCatchObject(collider, catchLayer);
                             SetHash(combineObj, myColid, collisionObj.GetComponent<MeshCollider>());                            
                         }

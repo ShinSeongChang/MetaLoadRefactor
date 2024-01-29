@@ -235,6 +235,12 @@ public class GunStateController : MonoBehaviour
     {
         //레이캐스트 업데이트
         UpdateRaycast();
+
+        if(Controller_Physics.stopState)
+        {
+            gunText.gameObject.SetActive(false);
+            crossHair.gameObject.SetActive(false);
+        }
     }
 
     private void OnDisable()

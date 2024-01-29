@@ -164,11 +164,20 @@ public class GrabGun_Refactor : GunBase
         targetObj = state.hit.transform.gameObject;        
 
         // 단일 객체이면
-        // => CatchObject 이지만 Rigidbody가 없는 상태면 결국 MovedObject만 찍힘
-        // => 해당 if문 안에서 한번더 검사가 필요할듯?
         if(targetObj.GetComponent<MovedObject_Refactor>())
         {
-            targetObj.GetComponent<MovedObject_Refactor>().ChangedState();            
+            if(targetObj.GetComponentInParent<CatchObject_Refactor>())
+            {
+                targetObj = state.hit.transform.parent.gameObject;
+
+                CatchObject_Refactor controll = targetObj.GetComponent<CatchObject_Refactor>();
+                controll.ChangedState();
+                controll.SetUpMesh();
+            }
+            else
+            {
+                targetObj.GetComponent<MovedObject_Refactor>().ChangedState();            
+            }
         }
         // 조합된 오브젝트라면
         else
