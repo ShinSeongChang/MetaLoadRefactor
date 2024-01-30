@@ -67,7 +67,7 @@ public class MoveObjectData : MonoBehaviour
         // 움직였던 오브젝트라면 물리력 주입
         if (isMoved) 
         {
-            GetComponent<CatchObject_Refactor>().InitOverap();
+            GetComponent<CatchObject_Refactor>().InitOverlap();
         }
 
         // 불러온 오브젝트들은 전부 움직이지 않았던 오브젝트로 설정

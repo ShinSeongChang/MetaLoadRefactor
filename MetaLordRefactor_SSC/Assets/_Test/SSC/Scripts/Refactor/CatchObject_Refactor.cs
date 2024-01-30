@@ -2,7 +2,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using System.Collections.Generic;
 
-public class CatchObject_Refactor : MovedObject_Refactor
+public class CatchObject_Refactor : MovedObject_Refactor, IObserver
 {    
     HashSet<MeshCollider> childColid = new HashSet<MeshCollider>();            
 
@@ -115,11 +115,11 @@ public class CatchObject_Refactor : MovedObject_Refactor
                 if (checkContact)
                 {
                     Vector3 force = -(collision.contacts[0].normal * 2f);
-                    collision.gameObject.GetComponentInParent<CatchObject_Refactor>().InitOverap(force);
+                    collision.gameObject.GetComponentInParent<CatchObject_Refactor>().InitOverlap(force);
                 }
                 else
                 {
-                    collision.gameObject.GetComponentInParent<CatchObject_Refactor>().InitOverap();
+                    collision.gameObject.GetComponentInParent<CatchObject_Refactor>().InitOverlap();
                 }
             }
             // 단일 오브젝트면 단일 오브젝트에 물리력 부여           
@@ -128,11 +128,11 @@ public class CatchObject_Refactor : MovedObject_Refactor
                 if (checkContact)
                 {
                     Vector3 force = -(collision.contacts[0].normal * 200f);
-                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap(force);
+                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverlap(force);
                 }
                 else
                 {                    
-                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverap();
+                    collision.gameObject.GetComponent<MovedObject_Refactor>().InitOverlap();
                 }
             }
         }
@@ -293,8 +293,6 @@ public class CatchObject_Refactor : MovedObject_Refactor
             // 오브젝트 부모 변경 및 해쉬 갱신
             for (int i = 0; i < myChild.Length; i++)
             {
-                //myChild[i].transform.SetParent(contactObj.transform);
-
                 // Trigger Object Pass
                 if (!myChild[i].GetComponent<MovedObject_Refactor>())
                 {
@@ -307,7 +305,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
         }
 
         // 컨트롤러에 담겨있는 Hash중 나 자신을 제거 후 오브젝트채로 파괴
-        GunStateController.catchList.Remove(this);
+        GunStateController.instance.RemoveObserver(this);
         if (!gameObject.GetComponent<PaintTarget>())
             Destroy(gameObject);
             
@@ -337,7 +335,7 @@ public class CatchObject_Refactor : MovedObject_Refactor
         isSleep = false;
     }
 
-    public override void InitOverap()
+    public override void InitOverlap()
     {
         foreach (MeshCollider col in childColid)
         {
@@ -379,6 +377,33 @@ public class CatchObject_Refactor : MovedObject_Refactor
         }
     }
 
-    
+    void IObserver.Update()
+    {
+        // 탐색한 상위 오브젝트마다 가지고 있는 자식오브젝트 체크
+        GameObject[] nullObj = new GameObject[transform.childCount];
+
+        // 자식 오브젝트들 parent 해제
+        for (int i = 0; i < nullObj.Length; i++)
+        {
+            nullObj[i] = gameObject.transform.GetChild(i).gameObject;
+
+            if (nullObj[i].GetComponent<MovedObject_Refactor>() == null)
+            {
+                Destroy(nullObj[i]);
+                continue;
+            }
+
+            nullObj[i].GetComponent<MovedObject_Refactor>().CelarBond();
+            nullObj[i].gameObject.layer = LayerMask.NameToLayer("MovedObject");
+        }
+
+        for (int i = 0; i < nullObj.Length; i++)
+        {
+            nullObj[i].transform.parent = null;
+        }
+
+        // 이후 생성되었던 상위 오브젝트 파괴
+        Destroy(this.gameObject);
+    }
 
 }

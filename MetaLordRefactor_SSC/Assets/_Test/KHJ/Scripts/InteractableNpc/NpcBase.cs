@@ -9,7 +9,7 @@ public enum npcState
     objectAttached
 }
 
-public class NpcBase : MonoBehaviour
+public class NpcBase : MonoBehaviour, IObserver
 {
     //protected bool isAttached = false;
     protected npcState state;
@@ -45,6 +45,12 @@ public class NpcBase : MonoBehaviour
         {
             state = _change;
         }
+    }
+
+
+    void IObserver.Update()
+    {
+        ChangedState(npcState.normal);
     }
 
     public void PrintState()

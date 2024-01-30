@@ -842,7 +842,8 @@ public class Controller_Physics : MonoBehaviour
             Debug.Log(stepsSinceLastClimb);
             Debug.Log(climbHelpTime);*/
             //색칠 리스트에 추가 되어있을 경우만 검사
-            if (((angle <= viewAngle * 0.5f) || (stepsSinceLastClimb <= climbHelpTime)) && ToolFunc<PaintTarget>.ConatainsCollision(GunStateController.paintList, collision))
+            if (((angle <= viewAngle * 0.5f) || (stepsSinceLastClimb <= climbHelpTime)) &&
+                ToolFunc<IObserver>.ConatainsCollision(GunStateController.instance.observers, collision))
             {
                 isColoredWall = CheckPaintedWall(collision.contacts[i], normal);
                 //Debug.Log(isColoredWall);

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 using VHACD.Unity;
@@ -26,7 +27,7 @@ public enum TextureSize
     Texture4096x4096 = 4096
 }
 
-public class PaintTarget : MonoBehaviour
+public class PaintTarget : MonoBehaviour, IObserver
 {
     public TextureSize paintTextureSize = TextureSize.Texture1024x1024;
     public TextureSize renderTextureSize = TextureSize.Texture1024x1024;
@@ -77,12 +78,17 @@ public class PaintTarget : MonoBehaviour
     private static GameObject splatObject;
     private bool isPainted = false;
 
+    GunStateController state;
+    IObserver myObserver;
+
     // 12.13 SSC
     // 페인트 초기화시 컬러값 초기화로 돌릴 origin값 저장 필드 추가
     private void Awake()
     {
         ReadPixel = null;
         originTex = splatTexPick;
+        state = GunStateController.instance;
+        myObserver = GetComponent<IObserver>();
     }
 
 
@@ -464,15 +470,17 @@ public class PaintTarget : MonoBehaviour
                         for(int i = 0; i < hitsNpc.Length; i++)
                         {
                             NpcBase currNpc = hitsNpc[i].collider.gameObject.GetComponent<NpcBase>();
+
                             if (currNpc != null)
                             {
+                                GunStateController.instance.AddObserver(currNpc);
                                 currNpc.ChangedState(npcState.glued);
-                                GunStateController.AddList(currNpc);                                
                             }
 
                         }
                         // 12.27 SSC : 페인트칠시 GunStateController에서 HashSet으로 관리하기위해 추가
-                        GunStateController.AddList(paintTarget);
+                        //GunStateController.AddList(paintTarget);
+                        GunStateController.instance.AddObserver(paintTarget);
                         paintTarget.isPainted = true;
                     }
                 }
@@ -483,16 +491,16 @@ public class PaintTarget : MonoBehaviour
                 if (!paintTarget) return;
 
                 PaintObject(paintTarget, hit.point, hit.normal, brush);
-                
+
                 // 12.27 SSC : 페인트칠시 GunStateController에서 HashSet으로 관리하기위해 추가
-                GunStateController.AddList(paintTarget);
+                GunStateController.instance.AddObserver(paintTarget);
                 paintTarget.isPainted = true;
 
                 // 12.26 SSC : 페인트칠시 NPC 범위로 체크하기 위하여 조건문 추가
                 if (paintTarget.gameObject.GetComponent<NpcBase>() != null)
                 {
+                    GunStateController.instance.AddObserver(paintTarget.gameObject.GetComponent<NpcBase>());
                     paintTarget.gameObject.GetComponent<NpcBase>().ChangedState(npcState.glued);
-                    GunStateController.AddList(paintTarget.gameObject.GetComponent<NpcBase>());                    
                 }
 
             }
@@ -759,6 +767,8 @@ public class PaintTarget : MonoBehaviour
     {
         m_Splats.Clear();
         isPainted = false;
+        splatTexPick = originTex;
+
         if (setupComplete)
         {
             CommandBuffer cb = new CommandBuffer();
@@ -894,4 +904,8 @@ public class PaintTarget : MonoBehaviour
         return isPainted;
     }
 
+    void IObserver.Update()
+    {
+        ClearPaint();
+    }
 }

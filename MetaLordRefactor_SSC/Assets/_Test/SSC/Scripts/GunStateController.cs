@@ -1,12 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.SocialPlatforms;
 using UnityEngine.UI;
 public enum GunState { READY, EMPTY, RELOADING }
 
-public class GunStateController : MonoBehaviour
+public class GunStateController : MonoBehaviour, ISubject
 {
 
     // 심볼릭 상수
@@ -22,6 +23,8 @@ public class GunStateController : MonoBehaviour
 
     GunBase[] mode = new GunBase[2];
     GunBase currentMode;
+    public static GunStateController instance;
+
     public GunBase CurrentMode { get { return currentMode; } private set { currentMode = value; } }
 
     public void Shoot(GunMode _mode)
@@ -129,10 +132,7 @@ public class GunStateController : MonoBehaviour
 
     [HideInInspector] public NpcBase targetNpc = null;
     [HideInInspector] public GunState state;
-    [HideInInspector] public static HashSet<PaintTarget> paintList;
-    [HideInInspector] public static HashSet<MovedObject_Refactor> bondList;
-    [HideInInspector] public static HashSet<NpcBase> npcList;
-    [HideInInspector] public static HashSet<CatchObject_Refactor> catchList;
+    [HideInInspector] public HashSet<IObserver> observers = new HashSet<IObserver>();
 
     Image[] gunImage;
     TextMeshProUGUI gunText;
@@ -193,11 +193,12 @@ public class GunStateController : MonoBehaviour
     #region CallBack
     private void Awake()
     {
+        instance = this;
+
         lerpTime = 0.2f;        
         gunImage = GunUi.transform.GetChild(0).GetComponentsInChildren<Image>();
         gunText = GunUi.transform.GetChild(1).GetComponentInChildren<TextMeshProUGUI>();
         textRect = gunText.GetComponent<RectTransform>();
-        //originColor = GunUi.transform.GetChild(0).transform.
 
         mode[(int)GunMode.Paint] = transform.GetComponent<PaintGun>();
         mode[(int)GunMode.Grab] = transform.GetComponent<GrabGun_Refactor>();        
@@ -211,10 +212,10 @@ public class GunStateController : MonoBehaviour
         SwapLayer();
 
         // TODO : 씬 넘어가거나 특정 구간에서 HashSet 내용을 비우는 기믹 필요        
-        paintList = new HashSet<PaintTarget>();
-        bondList = new HashSet<MovedObject_Refactor>();
-        npcList = new HashSet<NpcBase>();
-        catchList = new HashSet<CatchObject_Refactor>();
+        //paintList = new HashSet<PaintTarget>();
+        //bondList = new HashSet<MovedObject_Refactor>();
+        //npcList = new HashSet<NpcBase>();
+        //catchList = new HashSet<CatchObject_Refactor>();
 
         if (!cameraController)
             cameraController = Camera.main.GetComponentInParent<CameraController>();
@@ -420,11 +421,8 @@ public class GunStateController : MonoBehaviour
         int id = (int)GunSoundList.Reload;
         SoundManager.instance.PlaySound(GroupList.Gun, id);
 
-        state = GunState.RELOADING;        
-        ClearNpcList();
-        ClearAllPaint();
-        ClearBondList();
-        ClearCatchList();
+        state = GunState.RELOADING;
+        Notify();
         currentMode.StopLerpGaguge();
         StopAllCoroutines();
         StartCoroutine(ReloadingAmmo());
@@ -463,86 +461,6 @@ public class GunStateController : MonoBehaviour
         crossHair.sprite = crossHairSprite[(int)CrossHair.ABLE];
         crossHair.gameObject.SetActive(true);
     }
-
-    // 오버로딩 메소드 모음
-    #region 오버로딩 메소드 모음
-    public static void AddList(MovedObject_Refactor obj)
-    {
-        bondList.Add(obj);        
-    }
-
-    public static void AddList(PaintTarget obj)
-    {
-        paintList.Add(obj);
-    }
-
-    public static void AddList(NpcBase obj)
-    {
-        npcList.Add(obj);
-    }
-
-    public static void AddList(CatchObject_Refactor obj)
-    {        
-        catchList.Add(obj);        
-    }
-
-    void ClearBondList()
-    {        
-
-        foreach (var paint in bondList)
-        {            
-            paint.ClearTrigger();
-        }
-
-        bondList.Clear();
-    }
-
-    void ClearNpcList()
-    {
-        foreach (var paint in npcList)
-        {
-            paint.ChangedState(npcState.normal);
-        }
-
-        npcList.Clear();
-    }
-
-    void ClearCatchList()
-    {        
-        // 저장한 HashSet 만큼의 상위 오브젝트 탐색
-        foreach (var obj in catchList)
-        {            
-            // 탐색한 상위 오브젝트마다 가지고 있는 자식오브젝트 체크
-            GameObject[] nullObj = new GameObject[obj.transform.childCount];            
-
-            // 자식 오브젝트들 parent 해제
-            for(int i = 0; i < nullObj.Length; i++)
-            {
-                nullObj[i] = obj.gameObject.transform.GetChild(i).gameObject;
-
-                if (nullObj[i].GetComponent<MovedObject_Refactor>() == null)
-                {
-                    Destroy(nullObj[i]);
-                    continue;
-                }
-
-                nullObj[i].GetComponent<MovedObject_Refactor>().CelarBond();
-                nullObj[i].gameObject.layer = LayerMask.NameToLayer("MovedObject");
-            }
-
-            for (int i = 0; i < nullObj.Length; i++)
-            {                
-                nullObj[i].transform.parent = null;
-            }
-
-            // 이후 생성되었던 상위 오브젝트 파괴
-            Destroy(obj.gameObject);
-        }
-
-        catchList.Clear();        
-    }
-
-    #endregion
 
     public void GunModeUnlock(GunMode gunMode)
     {
@@ -592,20 +510,8 @@ public class GunStateController : MonoBehaviour
         int id = (int)GunSoundList.ChangeMod;
         SoundManager.instance.PlaySound(GroupList.Gun, id);
 
-        //SwapTest(changeMode);
         currentMode = mode[(int)changeMode];
         SwapLayer();
-    }
-
-    public void ClearAllPaint()
-    {
-        foreach (PaintTarget target in paintList)
-        {
-            target.ClearPaint();
-            target.splatTexPick = target.originTex;
-        }
-
-        paintList.Clear();
     }
 
     void UpdateText(float time)
@@ -798,5 +704,27 @@ public class GunStateController : MonoBehaviour
         }
 
         textFadeOut = StartCoroutine(IEFadeOutText(_text));
+    }
+
+    public void AddObserver(IObserver o)
+    {
+        observers.Add(o);
+    }
+
+    public void RemoveObserver(IObserver o)
+    {
+        if (observers.Count > 0)
+        {
+            observers.Remove(o);
+        }
+    }
+
+    public void Notify()
+    {
+        foreach(var target in observers)
+        {
+            target.Update();
+            RemoveObserver(target);
+        }
     }
 }

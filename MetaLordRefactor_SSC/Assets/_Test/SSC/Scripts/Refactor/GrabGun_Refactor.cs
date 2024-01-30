@@ -1,24 +1,52 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using static Controller_Physics;
+//using static Controller_Physics;
 
 public class GrabGun_Refactor : GunBase
 {
-    public static GrabGun_Refactor instance;    
-    public int GrabShot { get { return -ammo; } set { ammo = -value; } }
 
-    int excludedLayer;
-    GameObject targetObj = null;
-    Rigidbody targetRigid = null;      
-    List<Collider> colliders;
-    string grabCancelText = "그랩취소";
+    #region PrivateValue
+
+    GameObject targetObj = null;        // Grab한 오브젝트
+    Rigidbody targetRigid = null;       // Grab한 오브젝트의 Rigidbody
+
+    string grabCancelText = "그랩취소"; // Grab 유지 중 강제 취소시 나올 Ui
+
+    List<Collider> colliders;           // 성철이형 커스텀
+    int excludedLayer;                  // 성철이형 커스텀
+
+    #endregion
+
+    #region PublicValue
+
+    public static GrabGun_Refactor instance;    // Grab한 오브젝트가 취소 될때?? 내가 이걸 왜 선언했지
+
+    #endregion
+
+    #region Property
+    public int GrabShot 
+    { 
+        get { return -ammo; } 
+        set { ammo = -value; } 
+    }
+
+    #endregion
+
 
     protected override void Awake()
     {
         base.Awake();
 
-        instance = this;
+        if(instance == null)
+        {
+            instance = this;
+        }
+        else
+        {
+            Destroy(this);
+        }
+
         brush.splatChannel = 2;        
         mode = GunMode.Grab;
         excludedLayer = LayerMask.NameToLayer("Player");
@@ -73,6 +101,7 @@ public class GrabGun_Refactor : GunBase
 
     public void GrabObj()
     {
+        // 그랩한 오브젝트가 있을 때
         if (targetRigid)
         {            
             if (state.GetConnectObject() == targetRigid || state.GetOnClimbe())
